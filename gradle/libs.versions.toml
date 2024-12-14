@@ -1,0 +1,11 @@
+[versions]
+kotlin = "2.1.0"
+kotlin-wrappers = "1.0.0-pre.754"
+jgit = "6.10.0.202406032230-r"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+[libraries]
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit"}
