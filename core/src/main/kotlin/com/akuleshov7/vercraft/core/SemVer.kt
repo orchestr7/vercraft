@@ -7,8 +7,15 @@ public enum class SemVerReleaseType {
     MAJOR,
     MINOR,
     PATCH
-}
+    ;
 
+    public companion object {
+        public fun fromValue(value: String): SemVerReleaseType {
+            // FixMe: logging
+            return SemVerReleaseType.valueOf(value.uppercase())
+        }
+    }
+}
 /**
  * Just a simple data class containing a version in a semver format parsed from string.
  * The only reason why it is not a data class, because I wanted a parsing logic in secondary constructor.

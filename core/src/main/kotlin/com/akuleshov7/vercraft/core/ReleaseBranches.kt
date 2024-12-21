@@ -19,29 +19,51 @@ public data class ReleaseBranch(
  * - create new release branches (in case when needed)
  */
 public class ReleaseBranches public constructor(private val git: Git) {
-    public val list: MutableList<ReleaseBranch> = git.branchList().call()
-        .filter { it.name.startsWith("$REFS_HEADS/$RELEASE_PREFIX/") }
-        .filter { it.name.removeReleaseBranchPrefix().isValidSemVerFormat() }
+    public val set: HashSet<ReleaseBranch> = git.branchList().call()
+        .toHashSet()
+        .filter {
+            it.name.startsWith("$REFS_HEADS/$RELEASE_PREFIX/") &&
+                    it.name.removeReleaseBranchPrefix().isValidSemVerFormat()
+        }
         .map { ReleaseBranch(Branch(git, it)) }
-        .toMutableList()
+        .toHashSet()
 
-    public fun findBranch(branch: Branch): ReleaseBranch? = list.find { it.branch == branch }
+    public fun findBranch(branch: Branch): ReleaseBranch? = set.find { it.branch == branch }
 
     public fun getLatestReleaseBranch(): ReleaseBranch? =
-        list.maxByOrNull { it.version }
+        set.maxByOrNull { it.version }
 
-    public fun createNewRelease(releaseType: SemVerReleaseType, version: SemVer? = null) {
-        // if version is null - then need to calculate it from other existing release branches
-        val newVersion = version ?: run {
-            getLatestReleaseBranch()
-                ?.version
-                ?.nextVersion(releaseType)
-                ?: SemVer(0, 0, 0).nextVersion(releaseType)
+    public fun createNewRelease(releaseType: SemVerReleaseType) {
+        if (releaseType == SemVerReleaseType.PATCH) {
+            // FixMe: logging
+            return
         }
+
+        val newVersion = getLatestReleaseBranch()
+            ?.version
+            ?.nextVersion(releaseType)
+            // if no branches have been yet created, then we can use version 0,0,0 as the default one
+            // we do not need to calculate anything here, as there is no possible situation when release
+            // was created with PATCH version. The ideology of this project says that patch release can only be made
+            // by the commit in the release branch with MAJOR or MINOR version
+            ?: SemVer(0, 0, 0).nextVersion(releaseType)
+
+        createBranch(newVersion)
+    }
+
+    public fun createNewRelease(version: SemVer) {
+        if (set.map { it.version }.contains(version)) {
+            // FixMe: logging
+            return
+        }
+        createBranch(version)
+    }
+
+    private fun createBranch(newVersion: SemVer) {
         git.branchCreate()
             .setName("release/$newVersion")
             .call()
-            .also { list.add(ReleaseBranch(Branch(git, it))) }
+            .also { set.add(ReleaseBranch(Branch(git, it))) }
 
         // creating annotated tags
         git.tag()
