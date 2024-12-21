@@ -35,8 +35,9 @@ public class VersionCalculator(
      */
     private fun calcVersionInMain(): SemVer {
         val latestRelease = releaseBranches.getLatestReleaseBranch()
-        val baseCommit =
-            latestRelease?.branch?.findBaseCommitIn(currentCheckoutBranch) ?: currentCheckoutBranch.gitLog[0]
+        // if no releases were made so far, then will calculate version starting from the initial commit
+        val baseCommit = latestRelease?.branch
+            ?.findBaseCommitIn(currentCheckoutBranch) ?: currentCheckoutBranch.gitLog[0]
         val distance = currentCheckoutBranch.numberOfCommitsAfter(baseCommit)
 
         val shortedHashCode = baseCommit.name.substring(0, 5)
@@ -59,10 +60,10 @@ public class VersionCalculator(
             )
         val distance = currentCheckoutBranch.numberOfCommitsAfter(baseCommit)
 
-        return releaseBranches.list.find { it.branch == currentCheckoutBranch }?.version?.incrementPatchVersion(distance)
+        return releaseBranches.set.find { it.branch == currentCheckoutBranch }?.version?.incrementPatchVersion(distance)
             ?: throw IllegalStateException(
                 "Cannot find branch ${currentCheckoutBranch.ref.name} in the list of release branches:" +
-                        "${releaseBranches.list}"
+                        "${releaseBranches.set}"
             )
     }
 
