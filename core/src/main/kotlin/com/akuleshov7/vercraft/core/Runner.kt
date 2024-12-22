@@ -9,7 +9,6 @@ public fun getVersion(gitPath: File): String {
         val releaseBranches = ReleaseBranches(git)
         val version = VersionCalculator(git, releaseBranches, git.repository)
         val resultedVer = version.calc()
-        println(resultedVer)
         // FixMe: logging
         return resultedVer
     }
