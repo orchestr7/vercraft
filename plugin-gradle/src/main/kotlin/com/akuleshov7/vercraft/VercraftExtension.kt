@@ -1,12 +1,28 @@
 package com.akuleshov7.vercraft
 
+import com.akuleshov7.vercraft.core.SemVerReleaseType
+import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 
-class VercraftExtension {
-    lateinit var type: Property<String>
+const val ERROR_RELEASE_TYPE_PARSING = "(!) Invalid value for `releaseType` property, " +
+        "please check the value in `-PreleaseType`. " +
+        "It can only be MAJOR, MINOR or PATCH"
 
-    constructor(objectFactory: ObjectFactory) {
-        this.type = objectFactory.property(String::class.java)
+open class VercraftExtension(objectFactory: ObjectFactory) {
+    val logger = Logging.getLogger(VercraftExtension::class.java)
+    var releaseType: Property<SemVerReleaseType> = objectFactory.property(SemVerReleaseType::class.java)
+
+    fun setReleaseTypeFromProps(prop: Any?) {
+        try {
+            releaseType.set(
+                prop?.toString()
+                    ?.let { SemVerReleaseType.fromValue(it) }
+                    ?: SemVerReleaseType.MINOR
+            )
+        } catch (e: IllegalArgumentException) {
+            logger.error(ERROR_RELEASE_TYPE_PARSING)
+            throw IllegalArgumentException(ERROR_RELEASE_TYPE_PARSING)
+        }
     }
 }

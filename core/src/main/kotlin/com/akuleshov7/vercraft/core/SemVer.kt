@@ -99,7 +99,7 @@ public class SemVer : Comparable<SemVer> {
 
 public fun String.isValidSemVerFormat(): Boolean {
     try {
-        SemVer(this)
+        SemVer(this.removePrefix())
     } catch (ex: Exception) {
         when (ex) {
             // only those exceptions are known to be thrown in case of invalid parsing in `parseSemVer`
