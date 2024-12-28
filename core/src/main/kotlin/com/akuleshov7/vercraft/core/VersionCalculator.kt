@@ -11,7 +11,7 @@ import kotlin.math.min
 internal const val MAIN_BRANCH_NAME: String = "main"
 
 public class VersionCalculator(
-    private val git: Git,
+    git: Git,
     private val releases: Releases,
     private val currentCheckoutBranch: Branch,
 ) {
@@ -65,9 +65,8 @@ public class VersionCalculator(
 
     public fun calcVersionInBranch(): SemVer {
         // replace all special symbols except letters and digits from branch name and limit it to 15 symbols
-        val branchName = currentCheckoutBranch.ref.name
+        val branchName = currentCheckoutBranch.ref.name.substringAfterLast("/")
         val branch = branchName
-            .substringAfterLast("/")
             .substring(0, min(branchName.length, 10))
             .replace("[^A-Za-z0-9]".toRegex(), "")
 
@@ -85,8 +84,7 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Long {
-        val mainBranch = Branch(git, repo.findRef(MAIN_BRANCH_NAME))
-        val baseCommit = currentCheckoutBranch.findBaseCommitIn(mainBranch)
+        val baseCommit = currentCheckoutBranch.findBaseCommitIn(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between $MAIN_BRANCH_NAME " +
                         "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
