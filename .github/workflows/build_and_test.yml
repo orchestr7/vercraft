@@ -1,0 +1,45 @@
+name: Build and test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=true -Dorg.gradle.parallel=true -Dorg.gradle.welcome=never
+
+jobs:
+  build_and_test_with_code_coverage:
+    name: Build and test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Cache konan
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-gradle-konan
+          restore-keys: |
+            ${{ runner.os }}-gradle-konan
+      - name: Gradle build with remote cache
+        uses: burrunan/gradle-cache-action@v1
+        with:
+          arguments: |
+            build
+          properties: |
+            org.gradle.caching=true
+          gradle-version: wrapper
+          # additional files to calculate key for dependency cache
+          gradle-dependencies-cache-key: |
+            buildSrc/**/Versions.kt
