@@ -26,15 +26,21 @@ public class VersionCalculator(
         }
 
     /**
-     * [[currentCheckoutBranch]] is main branch in this case,
-     * so we need to find last release and calculate the version. For example:
-     * 0.0.1 -> 0.0.2 (release/0.1.0) -> xxx -> yyy (?)
-     * The version for yyy will be calculated in the following way: 0.1.0 + number of commits between
-     * 0.0.2 and yyy (2 commits). So the version should be 0.1.2.
+     * The [[currentCheckoutBranch]] refers to the main branch in this context.
+     * To determine the version, we need to identify the last release and calculate
+     * the next version incrementally. For example:
      *
-     * (!) We will also add postfix to the version with 5 first letters of commit hash.
+     * aaa -> bbb (release/0.1.0) -> xxx -> yyy (?)
+     *
+     * The version for commit yyy is derived by adding the number of commits between
+     * commits bbb and yyy (in this case, 2 commits) to the incremented MINOR version of the
+     * last release version (0.1.0). Therefore, the resulting version for (yyy) will be 0.2.1.
+     *
+     * (!) Additionally, the version will be appended with a postfix consisting of
+     * the first 5 characters of the commit hash and "-rc". So the result will be as following:
+     * aaa -> bbb (release/0.1.0) -> 0.2.0-hash-rc -> 0.2.1-hash-rc (?)
      */
-    public fun calcVersionInMain(): SemVer {
+    private fun calcVersionInMain(): SemVer {
         val latestRelease = releases.getLatestReleaseBranch()
         // if no releases were made so far, then will calculate version starting from the initial commit
         val baseCommit = latestRelease?.branch
@@ -44,15 +50,41 @@ public class VersionCalculator(
         val shortedHashCode = baseCommit.name.substring(0, 5)
 
         return latestRelease
-            ?.let { latestRelease.version.incrementPatchVersion(distance).setPostFix(shortedHashCode) }
-            ?: run { SemVer(0, 0, distance + 1) }
+            ?.let {
+                latestRelease.version
+                    .nextVersion(SemVerReleaseType.MINOR)
+                    .incrementPatchVersion(distance)
+                    .setPostFix("$shortedHashCode-rc")
+            }
+            ?: run { SemVer(0, 0, distance) }
     }
 
     /**
-     * We have made a checkout of a (head) commit in release branch ad would like to calculate its version.
-     * In that case we need to find first commit in release branch and calculate the version based on that knowledge.
+     * The [[currentCheckoutBranch]] refers to any "release/" branch in this context.
+     *
+     * We have checked out a specific commit (HEAD) from a release branch and need to calculate its version.
+     * To achieve this, we must identify the first commit in the release branch and calculate the version based on that.
+     *
+     * Example:
+     * aaa -> bbb (release/0.1.0)
+     *        V
+     *       xxx
+     *        V
+     *       yyy (?)
+     *
+     * To compute the version, we locate the initial commit in the release branch — the point where the branch diverged
+     * from the main branch. Then, we calculate the distance (number of commits) between this base commit and the
+     * current commit for which we are determining the version.
+     *
+     * In this example:
+     * - Commit "bbb" represents version "0.1.0".
+     * - Commit "xxx" will have version "0.1.1".
+     * - Commit "yyy" will be assigned version "0.1.2".
+     *
+     * This scenario applies to PATCH versions. Commits like **xxx** and **yyy** are typically created to implement
+     * patches or additional fixes after the release of version **0.1.0** (commit **bbb**).
      */
-    public fun calcVersionInRelease(): SemVer {
+    private fun calcVersionInRelease(): SemVer {
         val distance = distanceFromMainBranch()
         return releases.releaseBranches.find { it.branch == currentCheckoutBranch }
             ?.version
@@ -63,8 +95,22 @@ public class VersionCalculator(
             )
     }
 
-    public fun calcVersionInBranch(): SemVer {
-        // replace all special symbols except letters and digits from branch name and limit it to 15 symbols
+    /**
+     * The [[currentCheckoutBranch]] refers to any non-release branch (e.g., "feature/blabla") in this context.
+     *
+     * To calculate the commit version, we determine the distance (number of commits) between the base commit
+     * (where the branch diverged from the main branch) and the current commit. This distance is used as the PATCH version,
+     * while the MAJOR and MINOR versions are set to 0 (resulting in a version format of 0.0.x).
+     *
+     * (!) Additionally, the version will include a postfix composed of:
+     * - The last segment of the branch name (substring after the final "/").
+     * - The current date in "yyyy-MM-dd" format.
+     *
+     * For example, if the branch is "feature/blabla" and the commit distance is 1,
+     * the version will be: "0.0.1-blabla-2024-12-24".
+     */
+    private fun calcVersionInBranch(): SemVer {
+        // replace all special symbols except letters and digits from branch name and limit it to 10 symbols
         val branchName = currentCheckoutBranch.ref.name.substringAfterLast("/")
         val branch = branchName
             .substring(0, min(branchName.length, 10))
@@ -79,7 +125,7 @@ public class VersionCalculator(
             dateFormat.timeZone = TimeZone.getDefault()
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
-            return SemVer(0,0, distance + 1).setPostFix("$branch-$formattedDate")
+            return SemVer(0, 0, distance + 1).setPostFix("$branch-$formattedDate")
         }
     }
 
