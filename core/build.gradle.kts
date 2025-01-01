@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    id("com.akuleshov7.buildutils.publishing-configuration")
+    id("com.akuleshov7.buildutils.publishing-default-configuration")
 }
 
 kotlin {
