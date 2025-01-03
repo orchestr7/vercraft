@@ -16,5 +16,5 @@ publishing {
     }
 }
 
-configurePublications()
+configureArtifact()
 configurePublishing()

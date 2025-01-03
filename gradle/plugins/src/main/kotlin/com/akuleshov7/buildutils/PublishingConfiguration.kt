@@ -19,8 +19,6 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.bundling.Jar
-import org.gradle.internal.logging.text.StyledTextOutput.Style.Failure
-import org.gradle.internal.logging.text.StyledTextOutput.Style.Success
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.extra
@@ -36,8 +34,8 @@ import org.jetbrains.dokka.gradle.DokkaPlugin
  * Configures all aspects of the publishing process.
  */
 fun Project.configurePublishing() {
-    apply<MavenPublishPlugin>()
     if (this == rootProject) {
+        apply<MavenPublishPlugin>()
         configureNexusPublishing()
     }
 
@@ -81,7 +79,7 @@ fun MavenPom.configurePom(project: Project) {
 /**
  * Configures all publications. The publications must already exist.
  */
-fun Project.configurePublications() {
+fun Project.configureArtifact() {
     if (this == rootProject) {
         return
     }
@@ -116,8 +114,8 @@ fun Project.configurePublications() {
  */
 @Suppress("TOO_LONG_FUNCTION")
 private fun Project.configureNexusPublishing() {
-    setPropertyFromEnv("OSSRH_USERNAME", "sonatypeUsername")
-    setPropertyFromEnv("OSSRH_PASSWORD", "sonatypePassword")
+    setPropertyFromEnv("SONATYPE_USER", "sonatypeUsername")
+    setPropertyFromEnv("SONATYPE_PASSWORD", "sonatypePassword")
 
     if (!hasProperties("sonatypeUsername", "sonatypePassword")) {
         println("Skipping Nexus publishing configuration as either sonatypeUsername or sonatypePassword are not set")
@@ -145,8 +143,8 @@ private fun Project.configureNexusPublishing() {
  * Should be explicitly called after each custom `publishing {}` section.
  */
 private fun Project.configureSigning() {
-    setPropertyFromEnv("GPG_SEC", "signingKey")
-    setPropertyFromEnv("GPG_PASSWORD", "signingPassword")
+    setPropertyFromEnv("PGP_SEC", "signingKey")
+    setPropertyFromEnv("PGP_PASSWORD", "signingPassword")
 
     if (hasProperty("signingKey")) {
         // signing only for GitHub Actions
