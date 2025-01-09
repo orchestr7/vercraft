@@ -5,10 +5,12 @@ import org.apache.logging.log4j.Logger
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 
+// TODO: release branches should include refs/heads also
 public const val REFS_HEADS: String = "refs/heads"
+public const val REFS_REMOTE_ORIGIN: String = "refs/remotes/origin"
 internal const val RELEASE_PREFIX = "release"
-internal fun String.removePrefix() = this.substringAfter("$REFS_HEADS/$RELEASE_PREFIX/")
-internal fun String.hasReleasePrefix() = this.startsWith("$REFS_HEADS/$RELEASE_PREFIX/")
+internal fun String.removePrefix() = this.substringAfter("$REFS_REMOTE_ORIGIN/$RELEASE_PREFIX/")
+internal fun String.hasReleasePrefix() = this.startsWith("$REFS_REMOTE_ORIGIN/$RELEASE_PREFIX/")
 
 public data class ReleaseBranch(
     val version: SemVer,
@@ -29,7 +31,9 @@ public class Releases public constructor(private val git: Git) {
 
     public val mainBranch: Branch = Branch(git, repo.findRef(MAIN_BRANCH_NAME))
 
-    public val releaseBranches: HashSet<ReleaseBranch> = git.branchList().call()
+    public val releaseBranches: HashSet<ReleaseBranch> = git.branchList()
+        .setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE)
+        .call()
         .toHashSet()
         .filter { it.name.hasReleasePrefix() && it.name.isValidSemVerFormat() }
         .map { ReleaseBranch(Branch(git, it)) }

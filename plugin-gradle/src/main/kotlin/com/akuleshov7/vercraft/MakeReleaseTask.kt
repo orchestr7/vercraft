@@ -16,7 +16,6 @@ abstract class MakeReleaseTask : DefaultTask() {
 
     @TaskAction
     fun createRelease() {
-        val version = com.akuleshov7.vercraft.core.createRelease(project.projectDir, releaseType.getOrElse(SemVerReleaseType.MINOR))
-        logger.warn("Successfully \"VerCrafted\" the release [$version]")
+        com.akuleshov7.vercraft.core.createRelease(project.projectDir, releaseType.getOrElse(SemVerReleaseType.MINOR))
     }
 }

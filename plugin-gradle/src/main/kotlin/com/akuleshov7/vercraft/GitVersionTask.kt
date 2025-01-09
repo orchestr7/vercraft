@@ -22,6 +22,5 @@ abstract class GitVersionTask : DefaultTask() {
         project.allprojects.forEach {
             it.version = version
         }
-        logger.warn("VerCrafted: $version")
     }
 }

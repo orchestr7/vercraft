@@ -54,7 +54,7 @@ public class VersionCalculator(
                 latestRelease.version
                     .nextVersion(SemVerReleaseType.MINOR)
                     .incrementPatchVersion(distance)
-                    .setPostFix("$shortedHashCode-rc")
+                    .setPostFix("rc-$shortedHashCode")
             }
             ?: run { SemVer(0, 0, distance) }
     }
