@@ -12,8 +12,8 @@ public class Branch(git: Git, public val ref: Ref) {
      * 1 -> 2 -> 3 -> 4 -> latest
      * commitNumberAfterThis(3) == 2
      */
-    public fun numberOfCommitsAfter(startCommit: RevCommit): Long {
-        var count = 0L
+    public fun numberOfCommitsAfter(startCommit: RevCommit): Int {
+        var count = 0
         gitLog.reversed().forEach { commitInBranch ->
             if (commitInBranch.id.name != startCommit.id.name) {
                 ++count

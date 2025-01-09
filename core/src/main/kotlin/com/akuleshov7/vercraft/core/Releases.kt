@@ -1,22 +1,30 @@
 package com.akuleshov7.vercraft.core
 
 import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
+import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ListBranchCommand
+import org.eclipse.jgit.api.errors.TransportException
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 
-// TODO: release branches should include refs/heads also
-public const val REFS_HEADS: String = "refs/heads"
-public const val REFS_REMOTE_ORIGIN: String = "refs/remotes/origin"
 internal const val RELEASE_PREFIX = "release"
-internal fun String.removePrefix() = this.substringAfter("$REFS_REMOTE_ORIGIN/$RELEASE_PREFIX/")
-internal fun String.hasReleasePrefix() = this.startsWith("$REFS_REMOTE_ORIGIN/$RELEASE_PREFIX/")
+
+/**
+ * Removal of prefixes: "refs/heads/", "refs/remotes/origin", "refs/tags/".
+ * We do not care if someone has a branch name 'origin', it will be filtered later, we only care about release/X.X.X branches.
+ *
+ * TODO: add configuration for remotes other than 'origin'
+ */
+internal fun String.shortName() = Repository.shortenRefName(this).substringAfterLast(Constants.DEFAULT_REMOTE_NAME + "/")
+internal fun String.removeReleasePrefix() = this.substringAfterLast("$RELEASE_PREFIX/")
+internal fun String.hasReleasePrefix() = this.startsWith("$RELEASE_PREFIX/")
 
 public data class ReleaseBranch(
     val version: SemVer,
     val branch: Branch,
 ) {
-    public constructor(branch: Branch) : this(SemVer(branch.ref.name.removePrefix()), branch)
+    public constructor(branch: Branch) : this(SemVer(branch.ref.name.shortName()), branch)
 }
 
 /**
@@ -27,17 +35,19 @@ public data class ReleaseBranch(
 public class Releases public constructor(private val git: Git) {
     private val logger = LogManager.getLogger(Releases::class.java)
 
+    init {
+        try {
+            git.fetch().call()
+        } catch (e: TransportException) {
+            logger.warn("(!) Not able to fetch remote repository <${e.message}>, will proceed with local snapshot")
+        }
+    }
+
     private val repo: Repository = git.repository
 
     public val mainBranch: Branch = Branch(git, repo.findRef(MAIN_BRANCH_NAME))
 
-    public val releaseBranches: HashSet<ReleaseBranch> = git.branchList()
-        .setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE)
-        .call()
-        .toHashSet()
-        .filter { it.name.hasReleasePrefix() && it.name.isValidSemVerFormat() }
-        .map { ReleaseBranch(Branch(git, it)) }
-        .toHashSet()
+    public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
     private val currentCheckoutBranch = Branch(git, repo.findRef(repo.branch))
 
@@ -106,4 +116,40 @@ public class Releases public constructor(private val git: Git) {
 
         logger.warn("+ Created a branch [release/$newVersion]")
     }
+
+    /**
+     * We have two sources for release branches: they can be created locally or can be taken from `remotes/origin`
+     */
+    private fun findReleaseBranches(): MutableSet<ReleaseBranch> {
+        // we can use .setListMode(ALL) here to get all release branches, but instead we will take remote and
+        // local branches, check their equality and if they are equal, then calculate version
+        val releaseBranchesFromRemote = getAndFilterReleaseBranches(git.branchList().setListMode(REMOTE))
+        val localReleaseBranches = getAndFilterReleaseBranches(git.branchList().setListMode(null))
+
+        // we will union LOCAL branches with REMOTE, with a priority to LOCAL
+        val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
+            .groupBy { it.branch.ref.name.shortName() }
+
+        allReleaseBranches.keys.forEach {
+            if(allReleaseBranches[it]!!.size > 1) {
+                if(allReleaseBranches[it]!![0].branch.gitLog != allReleaseBranches[it]!![1].branch.gitLog) {
+                    // TODO: error when release branch is checked-out (and calculating version for it) and differs from remote
+                    logger.warn("jFYI: Remote branch $it differs from the local branch $it. " +
+                            "Do you have any unpublished changes in your local branch?")
+                }
+            }
+        }
+
+        return allReleaseBranches.values.map { it.first() }.toHashSet()
+    }
+
+    private fun getAndFilterReleaseBranches(listBranchCommand: ListBranchCommand) =
+        listBranchCommand.call()
+            .toHashSet()
+            .filter {
+                val branchName = it.name.shortName()
+                branchName.hasReleasePrefix() && branchName.removeReleasePrefix().isValidSemVerFormat()
+            }
+            .map { ReleaseBranch(Branch(git, it)) }
+            .toHashSet()
 }

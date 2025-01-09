@@ -20,7 +20,7 @@ public class VersionCalculator(
 
     public fun calc(): SemVer =
         when {
-            currentCheckoutBranch.ref.name == "$REFS_HEADS/$MAIN_BRANCH_NAME" -> calcVersionInMain()
+            currentCheckoutBranch.ref.name.shortName() == MAIN_BRANCH_NAME -> calcVersionInMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
         }
@@ -54,7 +54,7 @@ public class VersionCalculator(
                 latestRelease.version
                     .nextVersion(SemVerReleaseType.MINOR)
                     .incrementPatchVersion(distance)
-                    .setPostFix("rc-$shortedHashCode")
+                    .setPostFix("rc+$shortedHashCode")
             }
             ?: run { SemVer(0, 0, distance) }
     }
@@ -125,11 +125,11 @@ public class VersionCalculator(
             dateFormat.timeZone = TimeZone.getDefault()
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
-            return SemVer(0, 0, distance + 1).setPostFix("$branch-$formattedDate")
+            return SemVer(0, 0, distance + 1).setPostFix("$branch+$formattedDate")
         }
     }
 
-    private fun distanceFromMainBranch(): Long {
+    private fun distanceFromMainBranch(): Int {
         val baseCommit = currentCheckoutBranch.findBaseCommitIn(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between $MAIN_BRANCH_NAME " +

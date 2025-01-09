@@ -21,13 +21,13 @@ public enum class SemVerReleaseType {
  * The only reason why it is not a data class, because I wanted a parsing logic in secondary constructor.
  */
 public class SemVer : Comparable<SemVer> {
-    public val major: Long
-    public val minor: Long
-    public val patch: Long
-    public var postfix: String = ""
+    public val major: Int
+    public val minor: Int
+    public val patch: Int
+    private var postfix: String = ""
 
     public constructor(ver: String) {
-        val parts = ver.split(".").map { it.toLong() }
+        val parts = ver.removeReleasePrefix().split(".").map { it.toInt() }
         require(parts.size == 3) {
             throw IllegalArgumentException("SemVer version [$this] must be in the following format: 'major.minor.patch'")
         }
@@ -36,7 +36,7 @@ public class SemVer : Comparable<SemVer> {
         patch = parts[2]
     }
 
-    public constructor(major: Long, minor: Long, patch: Long) {
+    public constructor(major: Int, minor: Int, patch: Int) {
         this.major = major
         this.minor = minor
         this.patch = patch
@@ -82,7 +82,7 @@ public class SemVer : Comparable<SemVer> {
         PATCH -> SemVer(major, minor, patch + 1)
     }
 
-    public fun incrementPatchVersion(increment: Long): SemVer = SemVer(major, minor, patch + increment)
+    public fun incrementPatchVersion(increment: Int): SemVer = SemVer(major, minor, patch + increment)
 
     public fun setPostFix(postfix: String): SemVer {
         this.postfix = postfix
@@ -98,14 +98,6 @@ public class SemVer : Comparable<SemVer> {
 }
 
 public fun String.isValidSemVerFormat(): Boolean {
-    try {
-        SemVer(this.removePrefix())
-    } catch (ex: Exception) {
-        when (ex) {
-            // only those exceptions are known to be thrown in case of invalid parsing in `parseSemVer`
-            is NumberFormatException, is IllegalArgumentException -> return false
-            else -> throw ex
-        }
-    }
-    return true
+    val semVerRegex = Regex("""^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$""")
+    return semVerRegex.matches(this)
 }
