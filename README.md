@@ -18,9 +18,12 @@ Special thanks to those awesome developers who give us great suggestions and hel
 Add the following plugin to your **parent** build.gradle(kts):
 ```kotlin
 plugins {
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.0.1")
+    // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.0.2")
 }
 ```
+
+(!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`
 
 To create local release tag, local release branch, calculate and return version, run:
 ```bash
@@ -31,8 +34,12 @@ To create local release tag, local release branch, calculate and return version,
 ./gradlew makeRelease -PreleaseType=MINOR
 ```
 
-To calculate, set (`project.version`) and return version for current checked-out commit, run:
+(!) Note: `makeRelease` task also pushes release tag and branch to remote git hosting.
+
+(Optional) For manual calculation of the version for current checked-out commit, run:
 ```bash
+# this is already done automatically for all projects by plugin,
+# but in case you need to do some manual calculations:
 ./gradlew gitVersion
 ```
 

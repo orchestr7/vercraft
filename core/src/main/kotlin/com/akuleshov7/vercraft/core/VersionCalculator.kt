@@ -45,7 +45,8 @@ public class VersionCalculator(
         val latestRelease = releases.getLatestReleaseBranch()
         // if no releases were made so far, then will calculate version starting from the initial commit
         val baseCommit = latestRelease?.branch
-            ?.findBaseCommitIn(currentCheckoutBranch) ?: currentCheckoutBranch.gitLog[0]
+            ?.findBaseCommitIn(currentCheckoutBranch) ?: currentCheckoutBranch.gitLog.last()
+
         val distance = currentCheckoutBranch.numberOfCommitsAfter(baseCommit)
 
         val shortedHashCode = baseCommit.name.substring(0, 5)

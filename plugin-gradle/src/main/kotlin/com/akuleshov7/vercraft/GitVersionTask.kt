@@ -18,9 +18,11 @@ abstract class GitVersionTask : DefaultTask() {
 
     @TaskAction
     fun gitVersion() {
-        version = getVersion(project.projectDir)
-        project.allprojects.forEach {
-            it.version = version
+        project.beforeEvaluate {
+            version = getVersion(project.projectDir)
+            project.allprojects.forEach {
+                it.version = version
+            }
         }
     }
 }

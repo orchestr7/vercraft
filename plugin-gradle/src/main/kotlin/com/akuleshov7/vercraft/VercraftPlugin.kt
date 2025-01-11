@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft
 
+import com.akuleshov7.vercraft.core.getVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -15,6 +16,12 @@ class VercraftPlugin : Plugin<Project> {
         )
 
         // TODO: think also about changing the version in settings.gradle
+        val ver = getVersion(project.projectDir)
+        project.allprojects.forEach {
+            it.version = ver
+        }
+
+        // registering tasks 'gitVersion' and 'makeRelease' for any manual run
         gitVersion(project)
         makeRelease(project, extension)
     }
