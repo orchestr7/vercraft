@@ -10,7 +10,7 @@ public fun getVersion(gitPath: File): String {
     Git.open(gitPath).use { git ->
         val releases = Releases(git)
         val resultedVer = releases.version.calc()
-        logger.warn(">> VERsion CRAFTED: $resultedVer <<")
+        logger.warn(">> VerCrafted: $resultedVer")
         return resultedVer.toString()
     }
 }

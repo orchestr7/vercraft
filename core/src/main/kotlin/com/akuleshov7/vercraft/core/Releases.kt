@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft.core
 
+import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
@@ -41,7 +42,7 @@ public class Releases public constructor(private val git: Git) {
         try {
             git.fetch().call()
         } catch (e: TransportException) {
-            logger.warn("(!) Not able to fetch remote repository <${e.message}>, will proceed with local snapshot.")
+            logger.warn("$ERROR_PREFIX Not able to fetch remote repository <${e.message}>, will proceed with local snapshot.")
         }
     }
 
@@ -69,22 +70,20 @@ public class Releases public constructor(private val git: Git) {
 
         if (currentCheckoutBranch != mainBranch) {
             throw IllegalStateException(
-                "(!) Branch which is currently checked out is [${currentCheckoutBranch.ref.name}], " +
+                "$ERROR_PREFIX Branch which is currently checked out is [${currentCheckoutBranch.ref.name}], " +
                         "but ${releaseType.name} release should always be done from [${mainBranch.ref.name}] branch. " +
                         "Because during the release VerCraft will create a new branch and tag."
             )
         } else {
             if (releaseType == SemVerReleaseType.PATCH) {
                 logger.warn(
-                    "(!) ReleaseType PATCH has been selected, so no new release branches " +
+                    "$ERROR_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
                             "will be created as patch releases should be made only in existing release branch."
                 )
                 // FIXME: need to switch to latest release branch and latest commit and set release tag there
             } else {
                 createBranch(newVersion)
-                pushBranch(newVersion)
                 createTag(newVersion)
-                pushTag(newVersion)
             }
         }
         return "$newVersion"
@@ -93,14 +92,12 @@ public class Releases public constructor(private val git: Git) {
     public fun createNewRelease(version: SemVer): String {
         if (releaseBranches.map { it.version }.contains(version)) {
             logger.warn(
-                "(!) The branch with the version [$version] which was selected for " +
+                "$ERROR_PREFIX The branch with the version [$version] which was selected for " +
                         "the new release already exists. No branches will be created, please change the version."
             )
         } else {
             createBranch(version)
-            pushBranch(version)
             createTag(version)
-            pushTag(version)
         }
         return version.toString()
     }
@@ -123,32 +120,6 @@ public class Releases public constructor(private val git: Git) {
         logger.warn("+ Created a branch [release/$newVersion]")
     }
 
-    private fun pushBranch(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("release/$newVersion")
-                .call()
-
-            logger.warn("+ Pushed a branch [release/$newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("(!) Not able to push branch to remote repository <${e.message}>, please do it manually.")
-        }
-    }
-
-    private fun pushTag(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("refs/tags/v$newVersion")
-                .call()
-
-            logger.warn("+ Pushed a tag v$newVersion [Release $newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("(!) Not able to push tag to remote repository <${e.message}>, please do it manually.")
-        }
-    }
-
     /**
      * We have two sources for release branches: they can be created locally or can be taken from `remotes/origin`
      */
@@ -168,7 +139,7 @@ public class Releases public constructor(private val git: Git) {
                 if (value[0].branch.gitLog != value[1].branch.gitLog) {
                     // TODO: error when release branch is checked-out (and calculating version for it) and differs from remote
                     logger.warn(
-                        "(!) jFYI: Remote and local branches '$it' differ. " +
+                        "$ERROR_PREFIX Remote and local branches '$it' differ. " +
                                 "Do you have any unpublished changes in your local branch? Will use " +
                                 "local branch to calculate versions."
                     )
@@ -188,4 +159,32 @@ public class Releases public constructor(private val git: Git) {
             }
             .map { ReleaseBranch(Branch(git, it)) }
             .toHashSet()
+
+    // === TODO: unused logic, which should be unified with the default gradle cmd tasks
+    // check [[MakeReleaseTask]]
+    private fun pushBranch(newVersion: SemVer) {
+        try {
+            git.push()
+                .setCredentialsProvider(LocalCredentialsProvider)
+                .add("release/$newVersion")
+                .call()
+
+            logger.warn("+ Pushed a branch [release/$newVersion]")
+        } catch (e: TransportException) {
+            logger.warn("$ERROR_PREFIX Not able to push branch to remote repository <${e.message}>, please do it manually.")
+        }
+    }
+
+    private fun pushTag(newVersion: SemVer) {
+        try {
+            git.push()
+                .setCredentialsProvider(LocalCredentialsProvider)
+                .add("refs/tags/v$newVersion")
+                .call()
+
+            logger.warn("+ Pushed a tag v$newVersion [Release $newVersion]")
+        } catch (e: TransportException) {
+            logger.warn("$ERROR_PREFIX Not able to push tag to remote repository <${e.message}>, please do it manually.")
+        }
+    }
 }

@@ -1,11 +1,12 @@
 package com.akuleshov7.vercraft
 
 import com.akuleshov7.vercraft.core.SemVerReleaseType
+import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import org.gradle.api.logging.Logging
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 
-const val ERROR_RELEASE_TYPE_PARSING = "(!) Invalid value for `releaseType` property, " +
+const val ERROR_RELEASE_TYPE_PARSING = "$ERROR_PREFIX Invalid value for `releaseType` property, " +
         "please check the value in `-PreleaseType`. " +
         "It can only be MAJOR, MINOR or PATCH"
 

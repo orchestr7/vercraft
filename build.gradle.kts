@@ -4,5 +4,5 @@ plugins {
     kotlin("jvm") version ("2.1.0")
     java
     id("com.akuleshov7.buildutils.publishing-configuration")
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.0.1")
+    // id("com.akuleshov7.vercraft.plugin-gradle") version("0.0.2")
 }

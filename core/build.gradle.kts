@@ -7,7 +7,6 @@ kotlin {
     explicitApi()
 }
 
-
 dependencies {
     implementation(libs.jgit)
     implementation(libs.slf4j.api)
