@@ -12,7 +12,7 @@ In case you don't have much time for this - at least spend 5 seconds to give us 
 **Thanks!** :pray: :partying_face:
 
 Special thanks to those awesome developers who give us great suggestions and help us to improve this project:
-@nulls, @semyon-zvyagin
+[@nulls](https://github.com/nulls), [@semyon-zvyagin](https://github.com/semyon-zvyagin)
 
 ### Quick start
 Add the following plugin to your **parent** build.gradle(kts):
