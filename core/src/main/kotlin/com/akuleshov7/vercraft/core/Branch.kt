@@ -10,11 +10,13 @@ public class Branch(git: Git, public val ref: Ref) {
     /**
      * Counts the number of commits (from the end) which were made in branch after the [[startCommit]]. For example:
      * 1 -> 2 -> 3 -> 4 -> latest
+     * + -> + -> v0 -> v1 -> v2
      * commitNumberAfterThis(3) == 2
      */
-    public fun numberOfCommitsAfter(startCommit: RevCommit): Long {
-        var count = 0L
-        gitLog.reversed().forEach { commitInBranch ->
+    public fun numberOfCommitsAfter(startCommit: RevCommit): Int {
+        var count = 0
+        // gitLog is always reverted from the last commit to the first one
+        gitLog.forEach { commitInBranch ->
             if (commitInBranch.id.name != startCommit.id.name) {
                 ++count
             } else {
@@ -36,9 +38,14 @@ public class Branch(git: Git, public val ref: Ref) {
      *  The base commit is 2.
      */
     public fun findBaseCommitIn(sourceBase: Branch): RevCommit? {
-        this.gitLog.reversed().forEach { commitInSub ->
-            // lastOrNull is optimized to make search from the end
-            val thisCommitInMainBranch = sourceBase.gitLog.lastOrNull { commitInSub.id.name == it.id.name }
+        // (!) gitLog is always in a reversed order (from last to first commit):
+        // 4 3 2 1
+        // 6 5 2
+        // ^ 6 not found
+        //   ^ 5 not found
+        //     ^ 2 - is a common commit
+        this.gitLog.forEach { commitInSub ->
+            val thisCommitInMainBranch = sourceBase.gitLog.firstOrNull { commitInSub.id.name == it.id.name }
             if (thisCommitInMainBranch != null) {
                 return thisCommitInMainBranch
             }

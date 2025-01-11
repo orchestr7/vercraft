@@ -20,7 +20,7 @@ public class VersionCalculator(
 
     public fun calc(): SemVer =
         when {
-            currentCheckoutBranch.ref.name == "$REFS_HEADS/$MAIN_BRANCH_NAME" -> calcVersionInMain()
+            currentCheckoutBranch.ref.name.shortName() == MAIN_BRANCH_NAME -> calcVersionInMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
         }
@@ -32,13 +32,14 @@ public class VersionCalculator(
      *
      * aaa -> bbb (release/0.1.0) -> xxx -> yyy (?)
      *
-     * The version for commit yyy is derived by adding the number of commits between
-     * commits bbb and yyy (in this case, 2 commits) to the incremented MINOR version of the
-     * last release version (0.1.0). Therefore, the resulting version for (yyy) will be 0.2.1.
+     * The version for commit yyy is derived by:
+     * 1) incremented MINOR version of the last release version (0.1.0)
+     * 2) incrementing PATCH version by the number of commits between commits bbb and yyy (in this case, 2 commits).
+     * Therefore, the resulting version for (yyy) will be 0.2.1.
      *
-     * (!) Additionally, the version will be appended with a postfix consisting of
-     * the first 5 characters of the commit hash and "-rc". So the result will be as following:
-     * aaa -> bbb (release/0.1.0) -> 0.2.0-hash-rc -> 0.2.1-hash-rc (?)
+     * (!) Additionally, to avoid the confusion with releases, the version will be appended with a postfix consisting of
+     * "-main" and the first 5 characters of the commit hash. So the result will be as following:
+     * aaa -> bbb (release/0.1.0) -> 0.2.0-main+hash -> 0.2.1-main+hash (?)
      */
     private fun calcVersionInMain(): SemVer {
         val latestRelease = releases.getLatestReleaseBranch()
@@ -54,7 +55,7 @@ public class VersionCalculator(
                 latestRelease.version
                     .nextVersion(SemVerReleaseType.MINOR)
                     .incrementPatchVersion(distance)
-                    .setPostFix("$shortedHashCode-rc")
+                    .setPostFix("$MAIN_BRANCH_NAME+$shortedHashCode")
             }
             ?: run { SemVer(0, 0, distance) }
     }
@@ -102,12 +103,12 @@ public class VersionCalculator(
      * (where the branch diverged from the main branch) and the current commit. This distance is used as the PATCH version,
      * while the MAJOR and MINOR versions are set to 0 (resulting in a version format of 0.0.x).
      *
-     * (!) Additionally, the version will include a postfix composed of:
+     * (!) Additionally, the version will include:
      * - The last segment of the branch name (substring after the final "/").
      * - The current date in "yyyy-MM-dd" format.
      *
      * For example, if the branch is "feature/blabla" and the commit distance is 1,
-     * the version will be: "0.0.1-blabla-2024-12-24".
+     * the version will be: "2024-12-24-blabla-1". With such version the clean-up of useless branch builds will be easier.
      */
     private fun calcVersionInBranch(): SemVer {
         // replace all special symbols except letters and digits from branch name and limit it to 10 symbols
@@ -125,11 +126,11 @@ public class VersionCalculator(
             dateFormat.timeZone = TimeZone.getDefault()
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
-            return SemVer(0, 0, distance + 1).setPostFix("$branch-$formattedDate")
+            return SemVer(NO_MAJOR, NO_MINOR, distance + 1).setPrefix("$formattedDate-$branch")
         }
     }
 
-    private fun distanceFromMainBranch(): Long {
+    private fun distanceFromMainBranch(): Int {
         val baseCommit = currentCheckoutBranch.findBaseCommitIn(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between $MAIN_BRANCH_NAME " +
