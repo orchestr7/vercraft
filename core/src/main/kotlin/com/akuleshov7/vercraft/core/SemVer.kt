@@ -2,6 +2,8 @@ package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.SemVerReleaseType.*
 
+internal const val NO_MAJOR = -1
+internal const val NO_MINOR = -1
 
 public enum class SemVerReleaseType {
     MAJOR,
@@ -24,6 +26,7 @@ public class SemVer : Comparable<SemVer> {
     public val major: Int
     public val minor: Int
     public val patch: Int
+    public var prefix: String = ""
     private var postfix: String = ""
 
     public constructor(ver: String) {
@@ -40,7 +43,6 @@ public class SemVer : Comparable<SemVer> {
         this.major = major
         this.minor = minor
         this.patch = patch
-
     }
 
     public override operator fun compareTo(other: SemVer): Int {
@@ -73,7 +75,12 @@ public class SemVer : Comparable<SemVer> {
     }
 
     override fun toString(): String {
-        return "$major.$minor.$patch${if (postfix != "") "-$postfix" else ""}"
+        val major = if (this.major == NO_MAJOR) "" else "${this.major}."
+        val minor = if (this.minor == NO_MINOR) "" else "${this.minor}."
+
+        return (if (prefix != "") "$prefix-" else "") +
+                "$major$minor${this.patch}" +
+                (if (postfix != "") "-$postfix" else "")
     }
 
     public fun nextVersion(nextVersion: SemVerReleaseType): SemVer = when (nextVersion) {
@@ -86,6 +93,11 @@ public class SemVer : Comparable<SemVer> {
 
     public fun setPostFix(postfix: String): SemVer {
         this.postfix = postfix
+        return this
+    }
+
+    public fun setPrefix(prefix: String): SemVer {
+        this.prefix = prefix
         return this
     }
 

@@ -16,7 +16,9 @@ internal const val RELEASE_PREFIX = "release"
  *
  * TODO: add configuration for remotes other than 'origin'
  */
-internal fun String.shortName() = Repository.shortenRefName(this).substringAfterLast(Constants.DEFAULT_REMOTE_NAME + "/")
+internal fun String.shortName() =
+    Repository.shortenRefName(this).substringAfterLast(Constants.DEFAULT_REMOTE_NAME + "/")
+
 internal fun String.removeReleasePrefix() = this.substringAfterLast("$RELEASE_PREFIX/")
 internal fun String.hasReleasePrefix() = this.startsWith("$RELEASE_PREFIX/")
 
@@ -39,7 +41,7 @@ public class Releases public constructor(private val git: Git) {
         try {
             git.fetch().call()
         } catch (e: TransportException) {
-            logger.warn("(!) Not able to fetch remote repository <${e.message}>, will proceed with local snapshot")
+            logger.warn("(!) Not able to fetch remote repository <${e.message}>, will proceed with local snapshot.")
         }
     }
 
@@ -58,6 +60,7 @@ public class Releases public constructor(private val git: Git) {
     public fun getLatestReleaseBranch(): ReleaseBranch? =
         releaseBranches.maxByOrNull { it.version }
 
+    // TODO: Not to create a release if we are now on main and on this commit there is already a release branch made
     public fun createNewRelease(releaseType: SemVerReleaseType): String {
         val newVersion = getLatestReleaseBranch()
             ?.version
@@ -67,7 +70,7 @@ public class Releases public constructor(private val git: Git) {
         if (currentCheckoutBranch != mainBranch) {
             throw IllegalStateException(
                 "(!) Branch which is currently checked out is [${currentCheckoutBranch.ref.name}], " +
-                        "but ${releaseType.name} release should be done from [${mainBranch.ref.name}] branch. " +
+                        "but ${releaseType.name} release should always be done from [${mainBranch.ref.name}] branch. " +
                         "Because during the release VerCraft will create a new branch and tag."
             )
         } else {
@@ -79,7 +82,9 @@ public class Releases public constructor(private val git: Git) {
                 // FIXME: need to switch to latest release branch and latest commit and set release tag there
             } else {
                 createBranch(newVersion)
+                pushBranch(newVersion)
                 createTag(newVersion)
+                pushTag(newVersion)
             }
         }
         return "$newVersion"
@@ -91,21 +96,22 @@ public class Releases public constructor(private val git: Git) {
                 "(!) The branch with the version [$version] which was selected for " +
                         "the new release already exists. No branches will be created, please change the version."
             )
-
         } else {
             createBranch(version)
+            pushBranch(version)
             createTag(version)
+            pushTag(version)
         }
         return version.toString()
     }
 
     private fun createTag(newVersion: SemVer) {
         git.tag()
-            .setName(newVersion.toString())
+            .setName("v${newVersion}")
             .setMessage("Release $newVersion")
             .call()
 
-        logger.warn("+ Created a tag [Release $newVersion]")
+        logger.warn("+ Created a tag v$newVersion [Release $newVersion]")
     }
 
     private fun createBranch(newVersion: SemVer) {
@@ -117,6 +123,32 @@ public class Releases public constructor(private val git: Git) {
         logger.warn("+ Created a branch [release/$newVersion]")
     }
 
+    private fun pushBranch(newVersion: SemVer) {
+        try {
+            git.push()
+                .setCredentialsProvider(LocalCredentialsProvider)
+                .add("release/$newVersion")
+                .call()
+
+            logger.warn("+ Pushed a branch [release/$newVersion]")
+        } catch (e: TransportException) {
+            logger.warn("(!) Not able to push branch to remote repository <${e.message}>, please do it manually.")
+        }
+    }
+
+    private fun pushTag(newVersion: SemVer) {
+        try {
+            git.push()
+                .setCredentialsProvider(LocalCredentialsProvider)
+                .add("refs/tags/v$newVersion")
+                .call()
+
+            logger.warn("+ Pushed a tag v$newVersion [Release $newVersion]")
+        } catch (e: TransportException) {
+            logger.warn("(!) Not able to push tag to remote repository <${e.message}>, please do it manually.")
+        }
+    }
+
     /**
      * We have two sources for release branches: they can be created locally or can be taken from `remotes/origin`
      */
@@ -126,16 +158,20 @@ public class Releases public constructor(private val git: Git) {
         val releaseBranchesFromRemote = getAndFilterReleaseBranches(git.branchList().setListMode(REMOTE))
         val localReleaseBranches = getAndFilterReleaseBranches(git.branchList().setListMode(null))
 
-        // we will union LOCAL branches with REMOTE, with a priority to LOCAL
+        // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
         val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
             .groupBy { it.branch.ref.name.shortName() }
 
         allReleaseBranches.keys.forEach {
-            if(allReleaseBranches[it]!!.size > 1) {
-                if(allReleaseBranches[it]!![0].branch.gitLog != allReleaseBranches[it]!![1].branch.gitLog) {
+            val value = allReleaseBranches[it]
+            if (value!!.size > 1) {
+                if (value[0].branch.gitLog != value[1].branch.gitLog) {
                     // TODO: error when release branch is checked-out (and calculating version for it) and differs from remote
-                    logger.warn("jFYI: Remote branch $it differs from the local branch $it. " +
-                            "Do you have any unpublished changes in your local branch?")
+                    logger.warn(
+                        "(!) jFYI: Remote and local branches '$it' differ. " +
+                                "Do you have any unpublished changes in your local branch? Will use " +
+                                "local branch to calculate versions."
+                    )
                 }
             }
         }

@@ -10,7 +10,7 @@ public fun getVersion(gitPath: File): String {
     Git.open(gitPath).use { git ->
         val releases = Releases(git)
         val resultedVer = releases.version.calc()
-        logger.warn("VERsion CRAFTED: $resultedVer")
+        logger.warn(">> VERsion CRAFTED: $resultedVer <<")
         return resultedVer.toString()
     }
 }
@@ -18,7 +18,7 @@ public fun getVersion(gitPath: File): String {
 public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType): String {
     Git.open(gitPath).use { git ->
         val version = Releases(git).createNewRelease(semVerReleaseType)
-        logger.warn("Successfully \"VerCrafted\" the release [$version]")
+        logger.warn(">> \"VerCrafted\" the release [$version] <<")
         return version
     }
 }
@@ -32,5 +32,5 @@ public fun createRelease(gitPath: File, version: SemVer) {
 
 
 public fun main() {
-    getVersion(File("../data-platform"))
+    createRelease(File("../data-platform"), SemVerReleaseType.MINOR)
 }
