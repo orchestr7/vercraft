@@ -52,7 +52,17 @@ public class Releases public constructor(private val git: Git) {
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
-    private val currentCheckoutBranch = Branch(git, repo.findRef(repo.branch))
+    private val currentCheckoutBranch = repo.branch
+        ?.let { Branch(git, repo.findRef(it)) }
+        ?: run {
+            logger.warn(
+                "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
+                        "Usually this happens on CI platforms, which check out particular commit. " +
+                        "Please pass the branch which you are trying to process to VerCraftю"
+            )
+
+            throw NullPointerException("Current checked out branch is null (looks like your current HEAD is detached)")
+        }
 
     public val version: VersionCalculator = VersionCalculator(git, this, currentCheckoutBranch)
 
