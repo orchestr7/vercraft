@@ -127,7 +127,9 @@ public class VersionCalculator(
             dateFormat.timeZone = TimeZone.getDefault()
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
-            return SemVer(NO_MAJOR, NO_MINOR, distance + 1).setPrefix("$formattedDate-$branch")
+            return SemVer(NO_MAJOR, NO_MINOR, distance + 1)
+                .setPrefix("$formattedDate-$branch")
+                .setPostFix(commit.name.substring(0, 5))
         }
     }
 
