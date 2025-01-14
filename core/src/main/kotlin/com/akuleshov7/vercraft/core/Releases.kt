@@ -58,10 +58,34 @@ public class Releases public constructor(private val git: Git) {
             logger.warn(
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
                         "Usually this happens on CI platforms, which check out particular commit. " +
-                        "Please pass the branch which you are trying to process to VerCraftю"
+                        "Trying to resolve branch name using known CI ENV variables: " +
+                        "$GITLAB_BRANCH_REF, $GITHUB_BRANCH_REF, $BITBUCKET_BRANCH_REF."
             )
 
-            throw NullPointerException("Current checked out branch is null (looks like your current HEAD is detached)")
+            val branchName = System.getenv(GITLAB_BRANCH_REF)
+                ?: System.getenv(GITHUB_BRANCH_REF)
+                ?: System.getenv(BITBUCKET_BRANCH_REF)
+                ?: System.getenv(VERCRAFT_BRANCH_REF)
+                ?: run {
+                    logger.warn(
+                        "$ERROR_PREFIX following variables are not defined in current env" +
+                                "$GITLAB_BRANCH_REF, $GITHUB_BRANCH_REF, $BITBUCKET_BRANCH_REF" +
+                                "Please pass the branch name which you are trying to process now explicitly " +
+                                "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH_REF. "
+                    )
+                    throw NullPointerException(
+                        "Current HEAD is detached and CI env variables with the branch name are not set, so" +
+                                "not able to determine the original branch name."
+                    )
+                }
+
+            Branch(
+                git,
+                git.branchList()
+                    .setListMode(REMOTE)
+                    .call()
+                    .first { it.name.endsWith(branchName) }
+            )
         }
 
     public val version: VersionCalculator = VersionCalculator(git, this, currentCheckoutBranch)
