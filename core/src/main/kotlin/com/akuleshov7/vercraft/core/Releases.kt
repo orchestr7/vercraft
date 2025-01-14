@@ -59,17 +59,17 @@ public class Releases public constructor(private val git: Git) {
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
                         "Usually this happens on CI platforms, which check out particular commit. " +
                         "Trying to resolve branch name using known CI ENV variables: " +
-                        "$GITLAB_BRANCH_REF, $GITHUB_BRANCH_REF, $BITBUCKET_BRANCH_REF."
+                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH_REF."
             )
 
             val branchName = System.getenv(GITLAB_BRANCH_REF)
-                ?: System.getenv(GITHUB_BRANCH_REF)
+                ?: System.getenv(GITHUB_HEAD_REF)
                 ?: System.getenv(BITBUCKET_BRANCH_REF)
                 ?: System.getenv(VERCRAFT_BRANCH_REF)
                 ?: run {
                     logger.warn(
                         "$ERROR_PREFIX following variables are not defined in current env" +
-                                "$GITLAB_BRANCH_REF, $GITHUB_BRANCH_REF, $BITBUCKET_BRANCH_REF" +
+                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH_REF" +
                                 "Please pass the branch name which you are trying to process now explicitly " +
                                 "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH_REF. "
                     )

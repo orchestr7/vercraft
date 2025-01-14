@@ -5,7 +5,7 @@ import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
 public const val GITLAB_BRANCH_REF: String = "CI_COMMIT_REF_NAME"
-public const val GITHUB_BRANCH_REF: String = "GITHUB_REF_NAME"
+public const val GITHUB_HEAD_REF: String = "GITHUB_HEAD_REF"
 public const val BITBUCKET_BRANCH_REF: String = "BITBUCKET_BRANCH"
 public const val VERCRAFT_BRANCH_REF: String = "VERCRAFT_BRANCH"
 
