@@ -6,7 +6,6 @@ import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.TransportException
-import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 
 internal const val RELEASE_PREFIX = "release"
@@ -17,8 +16,8 @@ internal const val RELEASE_PREFIX = "release"
  *
  * TODO: add configuration for remotes other than 'origin'
  */
-internal fun String.shortName() =
-    Repository.shortenRefName(this).substringAfterLast(Constants.DEFAULT_REMOTE_NAME + "/")
+internal fun String.shortName(remoteName: String) =
+    Repository.shortenRefName(this).substringAfterLast("$remoteName/")
 
 internal fun String.removeReleasePrefix() = this.substringAfterLast("$RELEASE_PREFIX/")
 internal fun String.hasReleasePrefix() = this.startsWith("$RELEASE_PREFIX/")
@@ -27,7 +26,11 @@ public data class ReleaseBranch(
     val version: SemVer,
     val branch: Branch,
 ) {
-    public constructor(branch: Branch) : this(SemVer(branch.ref.name.shortName()), branch)
+    // TODO: change to config value here instead of Constants
+    public constructor(branch: Branch, config: Config) : this(
+        SemVer(branch.ref.name.shortName(config.remote)),
+        branch
+    )
 }
 
 /**
@@ -35,20 +38,12 @@ public data class ReleaseBranch(
  * As utility it can:
  * - create new release branches (in case when needed)
  */
-public class Releases public constructor(private val git: Git) {
+public class Releases public constructor(private val git: Git, private val config: Config) {
     private val logger = LogManager.getLogger(Releases::class.java)
-
-    init {
-        try {
-            git.fetch().call()
-        } catch (e: TransportException) {
-            logger.warn("$ERROR_PREFIX Not able to fetch remote repository <${e.message}>, will proceed with local snapshot.")
-        }
-    }
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = Branch(git, repo.findRef(MAIN_BRANCH_NAME))
+    public val mainBranch: Branch = Branch(git, repo.findRef(config.defaultMainBranch))
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
@@ -59,19 +54,20 @@ public class Releases public constructor(private val git: Git) {
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
                         "Usually this happens on CI platforms, which check out particular commit. " +
                         "Trying to resolve branch name using known CI ENV variables: " +
-                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH_REF."
+                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH."
             )
 
-            val branchName = System.getenv(GITLAB_BRANCH_REF)
+            val branchName = config.checkoutBranch
+                ?: System.getenv(GITLAB_BRANCH_REF)
                 ?: System.getenv(GITHUB_HEAD_REF)
-                ?: System.getenv(BITBUCKET_BRANCH_REF)
-                ?: System.getenv(VERCRAFT_BRANCH_REF)
+                ?: System.getenv(BITBUCKET_BRANCH)
+                ?: System.getenv(VERCRAFT_BRANCH)
                 ?: run {
                     logger.warn(
                         "$ERROR_PREFIX following variables are not defined in current env" +
-                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH_REF" +
+                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH" +
                                 "Please pass the branch name which you are trying to process now explicitly " +
-                                "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH_REF. "
+                                "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
                     )
                     throw NullPointerException(
                         "Current HEAD is detached and CI env variables with the branch name are not set, so" +
@@ -88,7 +84,7 @@ public class Releases public constructor(private val git: Git) {
             )
         }
 
-    public val version: VersionCalculator = VersionCalculator(git, this, currentCheckoutBranch)
+    public val version: VersionCalculator = VersionCalculator(git, config, this, currentCheckoutBranch)
 
     public fun isReleaseBranch(branch: Branch): Boolean = releaseBranches.find { it.branch == branch } != null
 
@@ -149,7 +145,7 @@ public class Releases public constructor(private val git: Git) {
         git.branchCreate()
             .setName("release/$newVersion")
             .call()
-            .also { releaseBranches.add(ReleaseBranch(Branch(git, it))) }
+            .also { releaseBranches.add(ReleaseBranch(Branch(git, it), config)) }
 
         logger.warn("+ Created a branch [release/$newVersion]")
     }
@@ -165,7 +161,7 @@ public class Releases public constructor(private val git: Git) {
 
         // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
         val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
-            .groupBy { it.branch.ref.name.shortName() }
+            .groupBy { it.branch.ref.name.shortName(config.remote) }
 
         allReleaseBranches.keys.forEach {
             val value = allReleaseBranches[it]
@@ -188,10 +184,10 @@ public class Releases public constructor(private val git: Git) {
         listBranchCommand.call()
             .toHashSet()
             .filter {
-                val branchName = it.name.shortName()
+                val branchName = it.name.shortName(config.remote)
                 branchName.hasReleasePrefix() && branchName.removeReleasePrefix().isValidSemVerFormat()
             }
-            .map { ReleaseBranch(Branch(git, it)) }
+            .map { ReleaseBranch(Branch(git, it), config) }
             .toHashSet()
 
     // === TODO: unused logic, which should be unified with the default gradle cmd tasks
