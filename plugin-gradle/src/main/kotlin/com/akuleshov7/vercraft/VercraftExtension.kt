@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft
 
+import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.SemVerReleaseType
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import org.gradle.api.logging.Logging
@@ -13,6 +14,7 @@ const val ERROR_RELEASE_TYPE_PARSING = "$ERROR_PREFIX Invalid value for `release
 open class VercraftExtension(objectFactory: ObjectFactory) {
     val logger = Logging.getLogger(VercraftExtension::class.java)
     var releaseType: Property<SemVerReleaseType> = objectFactory.property(SemVerReleaseType::class.java)
+    var config: Property<Config> = objectFactory.property(Config::class.java)
 
     fun setReleaseTypeFromProps(prop: Any?) {
         try {

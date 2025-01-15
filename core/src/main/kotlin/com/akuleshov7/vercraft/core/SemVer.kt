@@ -1,9 +1,13 @@
 package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.SemVerReleaseType.*
+import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
+import org.apache.logging.log4j.LogManager
 
 internal const val NO_MAJOR = -1
 internal const val NO_MINOR = -1
+
+private val logger = LogManager.getLogger()
 
 public enum class SemVerReleaseType {
     MAJOR,
@@ -12,12 +16,19 @@ public enum class SemVerReleaseType {
     ;
 
     public companion object {
-        public fun fromValue(value: String): SemVerReleaseType {
-            // FixMe: logging
-            return SemVerReleaseType.valueOf(value.uppercase())
-        }
+        public fun fromValue(value: String): SemVerReleaseType =
+            runCatching { SemVerReleaseType.valueOf(value.uppercase()) }
+                .getOrNull()
+                ?: run {
+                    logger.error(
+                        "$ERROR_PREFIX value [$value] is not allowed as type of SemVer release. " +
+                                "Eligible values are: MAJOR, MINOR, PATCH"
+                    )
+                    throw IllegalArgumentException("")
+                }
     }
 }
+
 /**
  * Just a simple data class containing a version in a semver format parsed from string.
  * The only reason why it is not a data class, because I wanted a parsing logic in secondary constructor.

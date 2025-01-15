@@ -6,26 +6,26 @@ import java.io.File
 
 private val logger = LogManager.getLogger()
 
-public fun getVersion(gitPath: File): String {
+public fun getVersion(gitPath: File, config: Config): String {
     Git.open(gitPath).use { git ->
-        val releases = Releases(git)
+        val releases = Releases(git, config)
         val resultedVer = releases.version.calc()
         logger.warn(">> VerCrafted: $resultedVer")
         return resultedVer.toString()
     }
 }
 
-public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType): String {
+public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): String {
     Git.open(gitPath).use { git ->
-        val version = Releases(git).createNewRelease(semVerReleaseType)
-        logger.warn(">> \"VerCrafted\" the release [$version] <<")
+        val version = Releases(git, config).createNewRelease(semVerReleaseType)
+        logger.warn(">> \"VerCrafted\" new release [$version] <<")
         return version
     }
 }
 
 // TODO: support explicit version creation in Gradle Plugin
-public fun createRelease(gitPath: File, version: SemVer) {
+public fun createRelease(gitPath: File, version: SemVer, config: Config) {
     Git.open(gitPath).use { git ->
-        Releases(git).createNewRelease(version)
+        Releases(git, config).createNewRelease(version)
     }
 }

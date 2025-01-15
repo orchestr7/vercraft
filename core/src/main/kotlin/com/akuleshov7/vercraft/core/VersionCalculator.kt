@@ -8,10 +8,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.min
 
-internal const val MAIN_BRANCH_NAME: String = "main"
-
 public class VersionCalculator(
     git: Git,
+    private val config: Config,
     private val releases: Releases,
     private val currentCheckoutBranch: Branch,
 ) {
@@ -20,7 +19,8 @@ public class VersionCalculator(
 
     public fun calc(): SemVer =
         when {
-            currentCheckoutBranch.ref.name.shortName() == MAIN_BRANCH_NAME -> calcVersionInMain()
+            currentCheckoutBranch.ref.name
+                .shortName(config.remote) == config.defaultMainBranch -> calcVersionInMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
         }
@@ -56,7 +56,7 @@ public class VersionCalculator(
                 latestRelease.version
                     .nextVersion(SemVerReleaseType.MINOR)
                     .incrementPatchVersion(distance)
-                    .setPostFix("$MAIN_BRANCH_NAME+$shortedHashCode")
+                    .setPostFix("${config.defaultMainBranch}+$shortedHashCode")
             }
             ?: run { SemVer(0, 0, distance) }
     }
@@ -136,7 +136,7 @@ public class VersionCalculator(
     private fun distanceFromMainBranch(): Int {
         val baseCommit = currentCheckoutBranch.findBaseCommitIn(releases.mainBranch)
             ?: throw IllegalStateException(
-                "Can't find common ancestor commits between $MAIN_BRANCH_NAME " +
+                "Can't find common ancestor commits between ${config.defaultMainBranch} " +
                         "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
                         "and that is inconsistent git state."
             )

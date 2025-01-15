@@ -1,5 +1,7 @@
 package com.akuleshov7.vercraft
 
+import com.akuleshov7.vercraft.core.Config
+import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.SemVerReleaseType
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import org.gradle.api.DefaultTask
@@ -22,6 +24,9 @@ abstract class MakeReleaseTask : DefaultTask() {
     @get:Input
     abstract val releaseType: Property<SemVerReleaseType>
 
+    @get:Input
+    abstract val config: Property<Config>
+
     @Inject
     protected abstract fun getExecOperations(): ExecOperations?
 
@@ -32,7 +37,8 @@ abstract class MakeReleaseTask : DefaultTask() {
         val error = ByteArrayOutputStream()
         val version = com.akuleshov7.vercraft.core.createRelease(
             project.projectDir,
-            releaseType.getOrElse(SemVerReleaseType.MINOR)
+            releaseType.getOrElse(SemVerReleaseType.MINOR),
+            DefaultConfig
         )
 
         // === push release branch to remote
