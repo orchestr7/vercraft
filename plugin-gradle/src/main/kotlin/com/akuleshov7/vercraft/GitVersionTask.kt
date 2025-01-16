@@ -3,7 +3,7 @@ package com.akuleshov7.vercraft
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.getVersion
-import org.gradle.api.DefaultTask
+import com.akuleshov7.vercraft.utils.GitUtilsTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -14,7 +14,7 @@ import org.gradle.api.tasks.TaskAction
  * In case there were no releases in main/master branch before, then it will be calculated with patch version
  * (counting from the first commit in main).
  */
-abstract class GitVersionTask : DefaultTask() {
+abstract class GitVersionTask : GitUtilsTask() {
     @Internal
     var version: String = "0.0.0"
 
