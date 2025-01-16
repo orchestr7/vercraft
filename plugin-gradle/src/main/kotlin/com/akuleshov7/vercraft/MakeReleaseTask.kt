@@ -2,11 +2,13 @@ package com.akuleshov7.vercraft
 
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
+import com.akuleshov7.vercraft.core.SemVer
 import com.akuleshov7.vercraft.core.SemVerReleaseType
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import com.akuleshov7.vercraft.utils.GitUtilsTask
+import org.gradle.api.tasks.Optional
 
 
 /**
@@ -18,16 +20,29 @@ abstract class MakeReleaseTask : GitUtilsTask() {
     abstract val releaseType: Property<SemVerReleaseType>
 
     @get:Input
+    @get:Optional
+    abstract val semVer: Property<SemVer>
+
+    @get:Input
     abstract val config: Property<Config>
 
     @TaskAction
-    // TODO: unify common logic for tag and branch
     fun createRelease() {
-        val version = com.akuleshov7.vercraft.core.createRelease(
-            project.projectDir,
-            releaseType.getOrElse(SemVerReleaseType.MINOR),
-            DefaultConfig
-        )
+        val semVerVal = semVer.orNull
+
+        val version = if (semVerVal != null) {
+            com.akuleshov7.vercraft.core.createRelease(
+                project.projectDir,
+                semVerVal,
+                DefaultConfig
+            )
+        } else {
+            com.akuleshov7.vercraft.core.createRelease(
+                project.projectDir,
+                releaseType.getOrElse(SemVerReleaseType.MINOR),
+                DefaultConfig
+            )
+        }
 
         // Push release branch
         gitPushBranch(config.get().remote, "release/$version")

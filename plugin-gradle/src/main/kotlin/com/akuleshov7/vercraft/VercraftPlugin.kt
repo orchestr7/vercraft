@@ -12,6 +12,7 @@ import javax.inject.Inject
 const val DEFAULT_MAIN_BRANCH = "defaultMainBranch"
 const val CHECKOUT_BRANCH = "checkOutBranch"
 const val RELEASE_TYPE = "releaseType"
+const val SEM_VER = "semVer"
 const val REMOTE = "remote"
 
 class VercraftPlugin @Inject constructor(
@@ -21,8 +22,13 @@ class VercraftPlugin @Inject constructor(
         assert(project == project.rootProject) { "Vercraft plugin should be applied to root project" }
 
         val extension = project.extensions.create("vercraft", VercraftExtension::class.java)
+
+        // === getting gradle properties for the configuration of VerCraft
         extension.setReleaseTypeFromProps(
             project.findProperty(RELEASE_TYPE)
+        )
+        extension.setSemVerFromProps(
+            project.findProperty(SEM_VER)
         )
         extension.config.set(
             Config(
@@ -32,6 +38,7 @@ class VercraftPlugin @Inject constructor(
             )
         )
 
+        // === fetching project
         runGitCommand(
             listOf("git", "fetch", "origin", "--prune", "--tags"),
             "Unable to fetch project from the remote.",
@@ -61,5 +68,6 @@ class VercraftPlugin @Inject constructor(
         project.tasks.register("makeRelease", MakeReleaseTask::class.java) {
             it.releaseType.set(extension.releaseType)
             it.config.set(extension.config)
+            it.semVer.set(extension.semVer)
         }
 }

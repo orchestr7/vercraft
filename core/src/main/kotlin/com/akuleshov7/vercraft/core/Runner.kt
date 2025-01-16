@@ -18,14 +18,16 @@ public fun getVersion(gitPath: File, config: Config): String {
 public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): String {
     Git.open(gitPath).use { git ->
         val version = Releases(git, config).createNewRelease(semVerReleaseType)
-        logger.warn(">> \"VerCrafted\" new release [$version] <<")
+        logger.warn(">> VerCrafted new release [$version]")
         return version
     }
 }
 
-// TODO: support explicit version creation in Gradle Plugin
-public fun createRelease(gitPath: File, version: SemVer, config: Config) {
+public fun createRelease(gitPath: File, version: SemVer, config: Config): String {
     Git.open(gitPath).use { git ->
         Releases(git, config).createNewRelease(version)
+        logger.warn(">> VerCrafted new release [$version]")
     }
+
+    return version.toString()
 }

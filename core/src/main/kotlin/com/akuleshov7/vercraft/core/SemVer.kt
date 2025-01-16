@@ -24,7 +24,7 @@ public enum class SemVerReleaseType {
                         "$ERROR_PREFIX value [$value] is not allowed as type of SemVer release. " +
                                 "Eligible values are: MAJOR, MINOR, PATCH"
                     )
-                    throw IllegalArgumentException("")
+                    throw IllegalArgumentException("Value [$value] is not allowed as type of SemVer release")
                 }
     }
 }
