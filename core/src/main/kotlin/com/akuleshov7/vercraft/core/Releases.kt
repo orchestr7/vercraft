@@ -6,6 +6,7 @@ import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.TransportException
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 
 internal const val RELEASE_PREFIX = "release"
@@ -43,17 +44,12 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = run {
-        println(git.branchList().setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.ALL).call().map { it.name.shortName("origin") })
-        println(config.defaultMainBranch)
-        println(repo.findRef(config.defaultMainBranch))
-        Branch(git, repo.findRef(config.defaultMainBranch))
-    }
+    public val mainBranch: Branch = findBranch(config.defaultMainBranch)
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
     private val currentCheckoutBranch = repo.branch
-        ?.let { Branch(git, repo.findRef(it)) }
+        ?.let { findBranch(it) }
         ?: run {
             logger.warn(
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
@@ -195,31 +191,21 @@ public class Releases public constructor(private val git: Git, private val confi
             .map { ReleaseBranch(Branch(git, it), config) }
             .toHashSet()
 
-    // === TODO: unused logic, which should be unified with the default gradle cmd tasks
-    // check [[MakeReleaseTask]]
-    private fun pushBranch(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("release/$newVersion")
-                .call()
+    public fun findBranch(branch: String): Branch {
+        val main = repo.findRef("${Constants.R_HEADS}$branch")
+            ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
+            ?: run {
+                logger.error(
+                    "$ERROR_PREFIX Cannot find $branch in current repository. " +
+                            "Please check that fetch depth is not set to 1."
+                )
 
-            logger.warn("+ Pushed a branch [release/$newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("$ERROR_PREFIX Not able to push branch to remote repository <${e.message}>, please do it manually.")
-        }
-    }
+                throw IllegalStateException(
+                    "Cannot find $branch in current repository. " +
+                            "Please check that fetch depth is not set to 1."
+                )
+            }
 
-    private fun pushTag(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("refs/tags/v$newVersion")
-                .call()
-
-            logger.warn("+ Pushed a tag v$newVersion [Release $newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("$ERROR_PREFIX Not able to push tag to remote repository <${e.message}>, please do it manually.")
-        }
+        return Branch(git, main)
     }
 }
