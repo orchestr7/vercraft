@@ -44,7 +44,7 @@ public class Releases public constructor(private val git: Git, private val confi
     private val repo: Repository = git.repository
 
     public val mainBranch: Branch = run {
-        println(git.branchList().call().map { it.name })
+        println(git.branchList().setListMode(org.eclipse.jgit.api.ListBranchCommand.ListMode.ALL).call().map { it.name })
         println(config.defaultMainBranch)
         println(repo.findRef(config.defaultMainBranch))
         Branch(git, repo.findRef(config.defaultMainBranch))
