@@ -40,7 +40,7 @@ class VercraftPlugin @Inject constructor(
 
         // === fetching project
         runGitCommand(
-            listOf("git", "fetch", "origin", "--prune", "--tags"),
+            listOf("git", "fetch", extension.config.get().remote, "--prune", "--tags"),
             "Unable to fetch project from the remote.",
             execOperations,
             project,

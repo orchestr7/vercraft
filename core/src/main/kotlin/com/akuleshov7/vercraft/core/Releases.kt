@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.api.errors.TransportException
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 
@@ -46,7 +45,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
     public val mainBranch: Branch = findBranch(config.defaultMainBranch)
         ?: throw IllegalStateException("${config.defaultMainBranch} branch cannot be found in current git repo. " +
-                "Please check your fetched branches.")
+                "Please check your fetched branches and fetch-depth (CI platforms usually limit it.")
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
@@ -202,10 +201,7 @@ public class Releases public constructor(private val git: Git, private val confi
         val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
             ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
             ?: run {
-                logger.error(
-                    "$ERROR_PREFIX Cannot find $branch in current repository. " +
-                            "Please check that fetch depth is not set to 1."
-                )
+                logger.error("$ERROR_PREFIX Cannot find branch ref <$branch> in current repository. ")
                 return null
             }
 
