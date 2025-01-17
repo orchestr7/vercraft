@@ -5,7 +5,7 @@ import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.api.errors.TransportException
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 
 internal const val RELEASE_PREFIX = "release"
@@ -43,18 +43,20 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = Branch(git, repo.findRef(config.defaultMainBranch))
+    public val mainBranch: Branch = findBranch(config.defaultMainBranch)
+        ?: throw IllegalStateException("${config.defaultMainBranch} branch cannot be found in current git repo. " +
+                "Please check your fetched branches and fetch-depth (CI platforms usually limit it.")
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
-    private val currentCheckoutBranch = repo.branch
-        ?.let { Branch(git, repo.findRef(it)) }
+    private val currentCheckoutBranch = findBranch(repo.branch)
         ?: run {
             logger.warn(
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
                         "Usually this happens on CI platforms, which check out particular commit. " +
-                        "Trying to resolve branch name using known CI ENV variables: " +
-                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH."
+                        "Vercraft will try to resolve branch name using known CI ENV variables: " +
+                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH. " +
+                        "You can also set it explicitly by $VERCRAFT_BRANCH."
             )
 
             val branchName = config.checkoutBranch
@@ -66,7 +68,7 @@ public class Releases public constructor(private val git: Git, private val confi
                     logger.warn(
                         "$ERROR_PREFIX following variables are not defined in current env" +
                                 "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH" +
-                                "Please pass the branch name which you are trying to process now explicitly " +
+                                "Please pass the branch name which you are trying to process (check-out) now explicitly " +
                                 "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
                     )
                     throw NullPointerException(
@@ -190,31 +192,20 @@ public class Releases public constructor(private val git: Git, private val confi
             .map { ReleaseBranch(Branch(git, it), config) }
             .toHashSet()
 
-    // === TODO: unused logic, which should be unified with the default gradle cmd tasks
-    // check [[MakeReleaseTask]]
-    private fun pushBranch(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("release/$newVersion")
-                .call()
+    /**
+     * It appeared that standard findRef is only checking local branches
+     *
+     */
+    public fun findBranch(branch: String?): Branch? {
+        if (branch == null) return null
 
-            logger.warn("+ Pushed a branch [release/$newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("$ERROR_PREFIX Not able to push branch to remote repository <${e.message}>, please do it manually.")
-        }
-    }
+        val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
+            ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
+            ?: run {
+                logger.error("$ERROR_PREFIX Cannot find branch ref <$branch> in current repository. ")
+                return null
+            }
 
-    private fun pushTag(newVersion: SemVer) {
-        try {
-            git.push()
-                .setCredentialsProvider(LocalCredentialsProvider)
-                .add("refs/tags/v$newVersion")
-                .call()
-
-            logger.warn("+ Pushed a tag v$newVersion [Release $newVersion]")
-        } catch (e: TransportException) {
-            logger.warn("$ERROR_PREFIX Not able to push tag to remote repository <${e.message}>, please do it manually.")
-        }
+        return Branch(git, foundBranch)
     }
 }
