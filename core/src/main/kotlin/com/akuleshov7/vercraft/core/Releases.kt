@@ -45,11 +45,12 @@ public class Releases public constructor(private val git: Git, private val confi
     private val repo: Repository = git.repository
 
     public val mainBranch: Branch = findBranch(config.defaultMainBranch)
+        ?: throw IllegalStateException("${config.defaultMainBranch} branch cannot be found in current git repo. " +
+                "Please check your fetched branches.")
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
-    private val currentCheckoutBranch = repo.branch
-        ?.let { findBranch(it) }
+    private val currentCheckoutBranch = findBranch(repo.branch)
         ?: run {
             logger.warn(
                 "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
@@ -191,21 +192,23 @@ public class Releases public constructor(private val git: Git, private val confi
             .map { ReleaseBranch(Branch(git, it), config) }
             .toHashSet()
 
-    public fun findBranch(branch: String): Branch {
-        val main = repo.findRef("${Constants.R_HEADS}$branch")
+    /**
+     * It appeared that standard findRef is only checking local branches
+     *
+     */
+    public fun findBranch(branch: String?): Branch? {
+        if (branch == null) return null
+
+        val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
             ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
             ?: run {
                 logger.error(
                     "$ERROR_PREFIX Cannot find $branch in current repository. " +
                             "Please check that fetch depth is not set to 1."
                 )
-
-                throw IllegalStateException(
-                    "Cannot find $branch in current repository. " +
-                            "Please check that fetch depth is not set to 1."
-                )
+                return null
             }
 
-        return Branch(git, main)
+        return Branch(git, foundBranch)
     }
 }
