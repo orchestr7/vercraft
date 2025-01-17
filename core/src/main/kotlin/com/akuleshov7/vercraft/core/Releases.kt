@@ -43,7 +43,12 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = Branch(git, repo.findRef(config.defaultMainBranch))
+    public val mainBranch: Branch = run {
+        println(git.branchList().call().map { it.name })
+        println(config.defaultMainBranch)
+        println(repo.findRef(config.defaultMainBranch))
+        Branch(git, repo.findRef(config.defaultMainBranch))
+    }
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
