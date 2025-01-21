@@ -82,6 +82,7 @@ public class Releases public constructor(private val git: Git, private val confi
                 git.branchList()
                     .setListMode(REMOTE)
                     .call()
+                    // TODO: handle java.util.NoSuchElementException: Collection contains no element matching the predicate
                     .first { it.name.endsWith(branchName) }
             )
         }
