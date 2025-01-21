@@ -163,19 +163,21 @@ public class Releases public constructor(private val git: Git, private val confi
         val releaseBranchesFromRemote = getAndFilterReleaseBranches(git.branchList().setListMode(REMOTE))
         val localReleaseBranches = getAndFilterReleaseBranches(git.branchList().setListMode(null))
 
-        // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
-        val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
+        // we will make a union of LOCAL branches and REMOTE, with a priority to REMOTE
+        // TODO: think about it once again - for LOCAL case and detached HEAD may be it will be more useful to use LOCAL
+        // TODO: for CI case - definitely REMOTE (there is no LOCAL branches for CI)
+        // TODO: if there are differences and changes in LOCAL branch, but we are using remote, there will be more commits and we will fail
+        val allReleaseBranches = (releaseBranchesFromRemote + localReleaseBranches)
             .groupBy { it.branch.ref.name.shortName(config.remote) }
 
         allReleaseBranches.keys.forEach {
             val value = allReleaseBranches[it]
             if (value!!.size > 1) {
                 if (value[0].branch.gitLog != value[1].branch.gitLog) {
-                    // TODO: error when release branch is checked-out (and calculating version for it) and differs from remote
                     logger.warn(
                         "$ERROR_PREFIX Remote and local branches '$it' differ. " +
-                                "Do you have any unpublished changes in your local branch? Will use " +
-                                "local branch to calculate versions."
+                                "Do you have any non-pushed commits in your local branch? Will use " +
+                                "remote branch to calculate versions."
                     )
                 }
             }

@@ -2,8 +2,8 @@ name: Create release to Maven Central
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - 'release/**'
 
 env:
   PGP_SEC: ${{ secrets.PGP_SEC }}

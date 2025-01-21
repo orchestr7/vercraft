@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'release/**'
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=true -Dorg.gradle.parallel=true -Dorg.gradle.welcome=never
@@ -18,7 +19,11 @@ jobs:
         os: [ ubuntu-latest ]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # release workflow should have access to all tags
+          fetch-depth: 0
       - uses: gradle/actions/wrapper-validation@v4
       - name: Set up JDK 21
         uses: actions/setup-java@v4
