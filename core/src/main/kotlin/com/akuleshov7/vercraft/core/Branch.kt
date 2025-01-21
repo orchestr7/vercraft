@@ -12,25 +12,49 @@ public const val VERCRAFT_BRANCH: String = "VERCRAFT_BRANCH"
 public class Branch(git: Git, public val ref: Ref) {
     public val gitLog: List<RevCommit> = git.log().add(ref.objectId).call().toList()
 
+
     /**
-     * Counts the number of commits (from the end) which were made in branch after the [[startCommit]]. For example:
-     * 1 -> 2 -> 3 -> 4 -> latest
-     * + -> + -> v0 -> v1 -> v2
-     * commitNumberAfterThis(3) == 2
+     * Calculates the number of commits between two commits in a branch.
+     * The gitLog is expected to be in reverse order (from latest to oldest).
+     *
+     * @param startCommit The starting commit.
+     * @param endCommit The ending commit.
+     * @return The number of commits between startCommit and endCommit, or -1 if:
+     *         - Either commit is not found.
+     *         - startCommit appears after endCommit in the reversed log (latest -> oldest).
      */
-    public fun numberOfCommitsAfter(startCommit: RevCommit): Int {
+    public fun distanceBetweenCommits(startCommit: RevCommit, endCommit: RevCommit): Int {
         var count = 0
-        // gitLog is always reverted from the last commit to the first one
-        gitLog.forEach { commitInBranch ->
-            if (commitInBranch.id.name != startCommit.id.name) {
-                ++count
-            } else {
+        var endFound = false
+
+        for (commitInBranch in gitLog) {
+            // check for the endCommit first since the log is reversed
+            if (commitInBranch.id.name == endCommit.id.name) {
+                endFound = true
+            }
+
+            if (commitInBranch.id.name == startCommit.id.name) {
+                if (!endFound) {
+                    throw IllegalStateException(
+                        "Invalid commit order: Head commit '${endCommit.id.toString().substring(0, 5)}' was found " +
+                                "before the starting commit '${startCommit.id.toString().substring(0, 5)}'. "
+                    )
+                }
                 return count
+            }
+
+            if (endFound) {
+                ++count
             }
         }
 
-        return -1
+        // If we complete the loop without finding both commits, return -1
+        throw IllegalArgumentException(
+            "Not able to find neither commit ${startCommit.id.toString().substring(0, 5)}, " +
+                    "nor commit ${endCommit.id.toString().substring(0, 5)}"
+        )
     }
+
 
     /**
      * Finds the commit in [[sourceBase]] branch when a new sub-branch was created from it. For example:
@@ -42,7 +66,7 @@ public class Branch(git: Git, public val ref: Ref) {
      *
      *  The base commit is 2.
      */
-    public fun findBaseCommitIn(sourceBase: Branch): RevCommit? {
+    public fun intersectionCommitWithBranch(sourceBase: Branch): RevCommit? {
         // (!) gitLog is always in a reversed order (from last to first commit):
         // 4 3 2 1
         // 6 5 2
