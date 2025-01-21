@@ -36,8 +36,8 @@ public class Branch(git: Git, public val ref: Ref) {
             if (commitInBranch.id.name == startCommit.id.name) {
                 if (!endFound) {
                     throw IllegalStateException(
-                        "Invalid commit order: Head commit '${endCommit.id.toString().substring(0, 5)}' was found " +
-                                "before the starting commit '${startCommit.id.toString().substring(0, 5)}'. "
+                        "Invalid commit order: Head commit '${endCommit.name.toString().substring(0, 5)}' was found " +
+                                "before the starting commit '${startCommit.name.toString().substring(0, 5)}'. "
                     )
                 }
                 return count
@@ -50,8 +50,8 @@ public class Branch(git: Git, public val ref: Ref) {
 
         // If we complete the loop without finding both commits, return -1
         throw IllegalArgumentException(
-            "Not able to find neither commit ${startCommit.id.toString().substring(0, 5)}, " +
-                    "nor commit ${endCommit.id.toString().substring(0, 5)}"
+            "Not able to find neither commit ${startCommit.name.toString().substring(0, 5)}, " +
+                    "nor commit ${endCommit.name.toString().substring(0, 5)}"
         )
     }
 

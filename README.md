@@ -17,7 +17,7 @@ No boring configuration, add the following plugin to your **parent** build.gradl
 ```kotlin
 plugins {
     // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.0.2")
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.3.0")
 }
 
 // (!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`.

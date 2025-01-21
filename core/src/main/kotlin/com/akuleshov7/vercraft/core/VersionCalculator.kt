@@ -142,8 +142,9 @@ public class VersionCalculator(
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
                         "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
-                        "and that is inconsistent git state."
+                        "and that is an inconsistent git state."
             )
+
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
