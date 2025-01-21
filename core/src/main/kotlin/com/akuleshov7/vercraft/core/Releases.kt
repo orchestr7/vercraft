@@ -72,7 +72,7 @@ public class Releases public constructor(private val git: Git, private val confi
                                 "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
                     )
                     throw NullPointerException(
-                        "Current HEAD is detached and CI env variables with the branch name are not set, so" +
+                        "Current HEAD is detached and CI env variables with the branch name are not set, so " +
                                 "not able to determine the original branch name."
                     )
                 }
@@ -82,6 +82,7 @@ public class Releases public constructor(private val git: Git, private val confi
                 git.branchList()
                     .setListMode(REMOTE)
                     .call()
+                    // TODO: handle java.util.NoSuchElementException: Collection contains no element matching the predicate
                     .first { it.name.endsWith(branchName) }
             )
         }
@@ -90,6 +91,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
     public fun isReleaseBranch(branch: Branch): Boolean = releaseBranches.find { it.branch == branch } != null
 
+    // TODO: latest release should be calculated relatively to the HEAD commit
     public fun getLatestReleaseBranch(): ReleaseBranch? =
         releaseBranches.maxByOrNull { it.version }
 
@@ -112,7 +114,7 @@ public class Releases public constructor(private val git: Git, private val confi
                     "$ERROR_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
                             "will be created as patch releases should be made only in existing release branch."
                 )
-                // FIXME: need to switch to latest release branch and latest commit and set release tag there
+                // TODO: need to switch to latest release branch and latest commit and set release tag there
             } else {
                 createBranch(newVersion)
                 createTag(newVersion)

@@ -15,7 +15,9 @@ public class VersionCalculator(
     private val currentCheckoutBranch: Branch,
 ) {
     private val repo: Repository = git.repository
-    private val headCommit = repo.resolve("HEAD")
+    private val headCommit = RevWalk(repo).use {
+        it.parseCommit(repo.resolve("HEAD"))
+    }
 
     public fun calc(): SemVer =
         when {
@@ -44,10 +46,12 @@ public class VersionCalculator(
     private fun calcVersionInMain(): SemVer {
         val latestRelease = releases.getLatestReleaseBranch()
         // if no releases were made so far, then will calculate version starting from the initial commit
+        // TODO: latest release should be calculated relatively to the HEAD commit
         val baseCommit = latestRelease?.branch
-            ?.findBaseCommitIn(currentCheckoutBranch) ?: currentCheckoutBranch.gitLog.last()
+            ?.intersectionCommitWithBranch(currentCheckoutBranch)
+            ?: currentCheckoutBranch.gitLog.last()
 
-        val distance = currentCheckoutBranch.numberOfCommitsAfter(baseCommit)
+        val distance = currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
 
         val shortedHashCode = baseCommit.name.substring(0, 5)
 
@@ -127,19 +131,19 @@ public class VersionCalculator(
             dateFormat.timeZone = TimeZone.getDefault()
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
-            return SemVer(NO_MAJOR, NO_MINOR, distance + 1)
+            return SemVer(NO_MAJOR, NO_MINOR, distance)
                 .setPrefix("$formattedDate-$branch")
                 .setPostFix(commit.name.substring(0, 5))
         }
     }
 
     private fun distanceFromMainBranch(): Int {
-        val baseCommit = currentCheckoutBranch.findBaseCommitIn(releases.mainBranch)
+        val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
                         "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
                         "and that is inconsistent git state."
             )
-        return currentCheckoutBranch.numberOfCommitsAfter(baseCommit)
+        return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
