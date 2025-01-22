@@ -94,6 +94,8 @@ public class SemVer : Comparable<SemVer> {
                 (if (postfix != "") "-$postfix" else "")
     }
 
+    public fun justSemVer(): String = "$major.$minor.$patch"
+
     public fun nextVersion(nextVersion: SemVerReleaseType): SemVer = when (nextVersion) {
         MAJOR -> SemVer(major + 1, 0, 0)
         MINOR -> SemVer(major, minor + 1, 0)
