@@ -50,7 +50,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
-    private val currentCheckoutBranch = findBranch(repo.branch)
+    private val currentBranch = findBranch(repo.branch)
         ?: run {
             logger.warn(
                 "$WARN_PREFIX your current HEAD is detached (no branch is checked out). " +
@@ -78,19 +78,14 @@ public class Releases public constructor(private val git: Git, private val confi
                     )
                 }
 
-            Branch(
-                git,
-                git.branchList()
-                    .setListMode(REMOTE)
-                    .call()
-                    .firstOrNull { it.name.endsWith(branchName) }
-                    ?: throw IllegalArgumentException("Cannot find <$branchName> in the list of remote branches.")
-            )
+            findBranch(branchName)
+                ?: throw IllegalArgumentException("Cannot find <$branchName> in the list of remote or local branches.")
         }
 
-    public val version: VersionCalculator = VersionCalculator(git, config, this, currentCheckoutBranch)
+    public val version: VersionCalculator = VersionCalculator(git, config, this, currentBranch)
 
-    public fun isReleaseBranch(branch: Branch): Boolean = releaseBranches.find { it.branch == branch } != null
+    public fun isReleaseBranch(branch: Branch): Boolean =
+        releaseBranches.find { it.branch.ref == branch.ref } != null
 
     // TODO: latest release should be calculated relatively to the HEAD commit
     public fun getLatestReleaseBranch(): ReleaseBranch? =
@@ -105,9 +100,9 @@ public class Releases public constructor(private val git: Git, private val confi
             ?.nextVersion(releaseType)
             ?: version.calc().nextVersion(releaseType)
 
-        if (currentCheckoutBranch != mainBranch) {
+        if (currentBranch != mainBranch) {
             throw IllegalStateException(
-                "$ERROR_PREFIX Branch which is currently checked out is [${currentCheckoutBranch.ref.name}], " +
+                "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref.name}], " +
                         "but ${releaseType.name} release should always be done from [${mainBranch.ref.name}] branch. " +
                         "Because during the release VerCraft will create a new branch and tag."
             )
@@ -157,8 +152,9 @@ public class Releases public constructor(private val git: Git, private val confi
             .setMessage("Release ${newVersion.justSemVer()}")
             .call()
 
-        logger.warn("+ Created a tag v${newVersion.justSemVer()} [Release ${newVersion.justSemVer()}], " +
-                "original version is $newVersion")
+        logger.warn("+ Created a tag v${newVersion.justSemVer()} " +
+                "[Release ${newVersion.justSemVer()}], original version is $newVersion"
+        )
     }
 
     private fun createBranch(newVersion: SemVer) {
