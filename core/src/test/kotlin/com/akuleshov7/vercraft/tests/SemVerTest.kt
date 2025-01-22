@@ -1,4 +1,4 @@
-package com.akuleshov7.utils
+package com.akuleshov7.vercraft.tests
 
 import com.akuleshov7.vercraft.core.SemVer
 import kotlin.test.Test
