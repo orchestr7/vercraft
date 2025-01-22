@@ -53,7 +53,7 @@ public class VersionCalculator(
 
         val distance = currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
 
-        val shortedHashCode = baseCommit.name.substring(0, 5)
+        val shortedHashCode = headCommit.name.substring(0, 5)
 
         return latestRelease
             ?.let {

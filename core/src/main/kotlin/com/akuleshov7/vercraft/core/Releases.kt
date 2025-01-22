@@ -66,8 +66,8 @@ public class Releases public constructor(private val git: Git, private val confi
                 ?: System.getenv(VERCRAFT_BRANCH)
                 ?: run {
                     logger.warn(
-                        "$ERROR_PREFIX following variables are not defined in current env" +
-                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH" +
+                        "$ERROR_PREFIX following variables are not defined in current env " +
+                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH " +
                                 "Please pass the branch name which you are trying to process (check-out) now explicitly " +
                                 "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
                     )
