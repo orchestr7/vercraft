@@ -1,6 +1,7 @@
 package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
+import com.akuleshov7.vercraft.core.utils.WARN_PREFIX
 import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
@@ -14,7 +15,6 @@ internal const val RELEASE_PREFIX = "release"
  * Removal of prefixes: "refs/heads/", "refs/remotes/origin", "refs/tags/".
  * We do not care if someone has a branch name 'origin', it will be filtered later, we only care about release/X.X.X branches.
  *
- * TODO: add configuration for remotes other than 'origin'
  */
 internal fun String.shortName(remoteName: String) =
     Repository.shortenRefName(this).substringAfterLast("$remoteName/")
@@ -26,7 +26,6 @@ public data class ReleaseBranch(
     val version: SemVer,
     val branch: Branch,
 ) {
-    // TODO: change to config value here instead of Constants
     public constructor(branch: Branch, config: Config) : this(
         SemVer(branch.ref.name.shortName(config.remote)),
         branch
@@ -44,15 +43,17 @@ public class Releases public constructor(private val git: Git, private val confi
     private val repo: Repository = git.repository
 
     public val mainBranch: Branch = findBranch(config.defaultMainBranch)
-        ?: throw IllegalStateException("${config.defaultMainBranch} branch cannot be found in current git repo. " +
-                "Please check your fetched branches and fetch-depth (CI platforms usually limit it.")
+        ?: throw IllegalStateException(
+            "${config.defaultMainBranch} branch cannot be found in current git repo. " +
+                    "Please check your fetched branches and fetch-depth (CI platforms usually limit it."
+        )
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
     private val currentCheckoutBranch = findBranch(repo.branch)
         ?: run {
             logger.warn(
-                "$ERROR_PREFIX your current HEAD is detached (no branch is checked out). " +
+                "$WARN_PREFIX your current HEAD is detached (no branch is checked out). " +
                         "Usually this happens on CI platforms, which check out particular commit. " +
                         "Vercraft will try to resolve branch name using known CI ENV variables: " +
                         "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH. " +
@@ -82,8 +83,8 @@ public class Releases public constructor(private val git: Git, private val confi
                 git.branchList()
                     .setListMode(REMOTE)
                     .call()
-                    // TODO: handle java.util.NoSuchElementException: Collection contains no element matching the predicate
-                    .first { it.name.endsWith(branchName) }
+                    .firstOrNull { it.name.endsWith(branchName) }
+                    ?: throw IllegalArgumentException("Cannot find <$branchName> in the list of remote branches.")
             )
         }
 
@@ -97,7 +98,9 @@ public class Releases public constructor(private val git: Git, private val confi
 
     // TODO: Not to create a release if we are now on main and on this commit there is already a release branch made
     public fun createNewRelease(releaseType: SemVerReleaseType): String {
-        val newVersion = getLatestReleaseBranch()
+        val latestRelease = getLatestReleaseBranch()
+
+        val newVersion = latestRelease
             ?.version
             ?.nextVersion(releaseType)
             ?: version.calc().nextVersion(releaseType)
@@ -111,15 +114,27 @@ public class Releases public constructor(private val git: Git, private val confi
         } else {
             if (releaseType == SemVerReleaseType.PATCH) {
                 logger.warn(
-                    "$ERROR_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
-                            "will be created as patch releases should be made only in existing release branch."
+                    "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
+                            "will be created, as patch releases should be made only in existing release branch. " +
+                            if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
                 )
-                // TODO: need to switch to latest release branch and latest commit and set release tag there
+
+                if (latestRelease == null) {
+                    // if there have been no releases yet, we will simply create a patch tag on main/master
+                    git.checkout().setName(config.defaultMainBranch).call()
+                    createTag(VersionCalculator(git, config, this, findBranch(config.defaultMainBranch)!!).calc())
+                } else {
+                    // otherwise - we will check out release branch and tag latest commit
+                    git.checkout().setName(latestRelease.branch.ref.name).call()
+                    createTag(VersionCalculator(git, config, this, latestRelease.branch).calc())
+                }
+
             } else {
                 createBranch(newVersion)
                 createTag(newVersion)
             }
         }
+
         return "$newVersion"
     }
 
@@ -138,11 +153,12 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private fun createTag(newVersion: SemVer) {
         git.tag()
-            .setName("v${newVersion}")
-            .setMessage("Release $newVersion")
+            .setName("v${newVersion.justSemVer()}")
+            .setMessage("Release ${newVersion.justSemVer()}")
             .call()
 
-        logger.warn("+ Created a tag v$newVersion [Release $newVersion]")
+        logger.warn("+ Created a tag v${newVersion.justSemVer()} [Release ${newVersion.justSemVer()}], " +
+                "original version is $newVersion")
     }
 
     private fun createBranch(newVersion: SemVer) {
@@ -163,11 +179,8 @@ public class Releases public constructor(private val git: Git, private val confi
         val releaseBranchesFromRemote = getAndFilterReleaseBranches(git.branchList().setListMode(REMOTE))
         val localReleaseBranches = getAndFilterReleaseBranches(git.branchList().setListMode(null))
 
-        // we will make a union of LOCAL branches and REMOTE, with a priority to REMOTE
-        // TODO: think about it once again - for LOCAL case and detached HEAD may be it will be more useful to use LOCAL
-        // TODO: for CI case - definitely REMOTE (there is no LOCAL branches for CI)
-        // TODO: if there are differences and changes in LOCAL branch, but we are using remote, there will be more commits and we will fail
-        val allReleaseBranches = (releaseBranchesFromRemote + localReleaseBranches)
+        // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
+        val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
             .groupBy { it.branch.ref.name.shortName(config.remote) }
 
         allReleaseBranches.keys.forEach {
@@ -197,19 +210,17 @@ public class Releases public constructor(private val git: Git, private val confi
             .toHashSet()
 
     /**
-     * It appeared that standard findRef is only checking local branches
-     *
+     * It appeared that standard findRef is only checking local branches, so we will try to
+     * find ref first in local branches and then check that branch in the list of remote branches.
      */
-    public fun findBranch(branch: String?): Branch? {
-        if (branch == null) return null
-
-        val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
-            ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
-            ?: run {
-                logger.error("$ERROR_PREFIX Cannot find branch ref <$branch> in current repository. ")
-                return null
-            }
-
-        return Branch(git, foundBranch)
-    }
+    private fun findBranch(branch: String?): Branch? =
+        branch?.let {
+            val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
+                ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
+                ?: run {
+                    logger.warn("$WARN_PREFIX Cannot find branch ref <$branch> in current repository.")
+                    return null
+                }
+            Branch(git, foundBranch)
+        }
 }
