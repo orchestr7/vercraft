@@ -13,6 +13,6 @@ import kotlin.test.assertEquals
 class SmokeTest {
     @Test
     fun `smoke test`() {
-        gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/readme"))
+        gitVersion(File("../"), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/readme"))
     }
 }
