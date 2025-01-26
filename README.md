@@ -15,9 +15,16 @@ In case you don't have much time for this - at least spend 5 seconds to give us 
 ## Quick start
 No boring configuration, add the following plugin to your **parent** build.gradle(kts):
 ```kotlin
+pluginManagement {
+    repositories {
+        // Vercraft plugin is hosted on Maven Central
+        mavenCentral()
+    }
+}
+
 plugins {
     // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.3.0")
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.4.0")
 }
 
 // (!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`.
@@ -43,6 +50,23 @@ To create local release tag, local release branch, calculate and return version,
 # but in case you need to do some manual calculations:
 ./gradlew gitVersion
 ```
+
+## Vercraft in CI
+
+All modern CI platforms check out a specific commit to execute their actions. 
+This places the repository in a “detached HEAD” state, meaning Vercraft cannot automatically determine the current branch 
+you’re working with.
+
+However, CI platforms from major Git hosting providers propagate the original branch name used in MRs/PRs, 
+or as the trigger for a CI action. They achieve this using special environment variables, which Vercraft automatically 
+detects and utilizes:
+
+✅ GitHub: GITHUB_HEAD_REF \
+✅ GitLab: CI_COMMIT_REF_NAME \
+✅ Bitbucket: BITBUCKET_BRANCH
+
+💡For other CI platforms, please ensure you **manually set** the VERCRAFT_BRANCH environment variable.
+
 
 ## Supported Build Tools
 ✅ **Gradle** \
