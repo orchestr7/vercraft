@@ -31,6 +31,9 @@ To create local release tag, local release branch, calculate and return version,
 # to create a release branch with a newly calculated MINOR version
 ./gradlew makeRelease -PreleaseType=MINOR
 
+# to find latest release branch and mark latest commit with PATCH version
+./gradlew makeRelease -PreleaseType=PATCH
+
 # (!) Note: `makeRelease` task also pushes release tag and branch to remote git hosting.
 ```
 
@@ -47,7 +50,7 @@ To create local release tag, local release branch, calculate and return version,
 
 
 ## How it works
-VerCraft automatically calculates the version for your currently checked-out commit. 
+VerCraft automatically calculates the version for your currently checked-out ref (commit or branch). 
 It determines the version based solely on two factors: the currently checked-out branch and release branches 
 (branches with the release/ prefix) present in your project’s Git log.
 
@@ -60,7 +63,13 @@ distance from that point to the current commit to generate the version.
 The only requirement VerCraft imposes is the use of `release/` branches in your delivery process. 
 No need for extra tags on every commit or any redundant steps - just clean and efficient version management.
 
-![docs/example.png](docs/example.png)
+(!) Important: `release/` branches are actively used in Vercraft to calculate versions, so you **should not** delete them 
+(at least latest one) from your repository's git log.
+
+![docs/gitVersion.png](docs/gitVersion.png)
+
+![docs/makeRelease.png](docs/makeRelease.png)
+
 
 ## Why Choose VerCraft
 There are already several great tools like `gradle-plugin-versionest`, `reckon`, `JGitver`, and `nebula-release-plugin` 
