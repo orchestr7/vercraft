@@ -2,7 +2,7 @@ package com.akuleshov7.vercraft
 
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
-import com.akuleshov7.vercraft.core.getVersion
+import com.akuleshov7.vercraft.core.gitVersion
 import com.akuleshov7.vercraft.utils.runGitCommand
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -49,7 +49,7 @@ class VercraftPlugin @Inject constructor(
         )
 
         // TODO: think also about changing the version in settings.gradle
-        val ver = getVersion(project.projectDir, DefaultConfig)
+        val ver = gitVersion(project.projectDir, DefaultConfig)
         project.allprojects.forEach {
             it.version = ver
         }

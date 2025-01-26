@@ -37,7 +37,7 @@ public class Branch(git: Git, public val ref: Ref) {
                 if (!endFound) {
                     throw IllegalStateException(
                         "Invalid commit order: Head commit '${endCommit.name.toString().substring(0, 5)}' was found " +
-                                "before the starting commit '${startCommit.name.toString().substring(0, 5)}'. "
+                                "before the expected starting commit '${startCommit.name.toString().substring(0, 5)}'. "
                     )
                 }
                 return count
