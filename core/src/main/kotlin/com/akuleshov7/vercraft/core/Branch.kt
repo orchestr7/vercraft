@@ -32,6 +32,8 @@ public class Branch(git: Git, public val ref: Ref) {
         }
 
         println("BR:::::: ${ref.name}")
+        println(System.getenv("github.event.pull_request.head.sha"))
+        println(System.getenv("GITHUB_SHA"))
 
         for (commitInBranch in gitLog) {
             // check for the endCommit first since the log is reversed
@@ -42,8 +44,9 @@ public class Branch(git: Git, public val ref: Ref) {
             if (commitInBranch.id.name == startCommit.id.name) {
                 if (!endFound) {
                     throw IllegalStateException(
-                        "Invalid commit order: Head commit '${endCommit.name.toString().substring(0, 5)}' was found " +
-                                "before the expected starting commit '${startCommit.name.toString().substring(0, 5)}'. "
+                        "Invalid commit order or git state: not able to find commit '${endCommit.name}'" +
+                                "before the expected commit '${startCommit.name}'. Usually this happens on CI. " +
+                                "Please try to checkout commit ref: <${endCommit.name} and run `./gradlew gitVersion` locally.>"
                     )
                 }
                 return count

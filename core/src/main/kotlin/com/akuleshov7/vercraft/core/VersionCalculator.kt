@@ -15,6 +15,10 @@ public class VersionCalculator(
     private val currentCheckoutBranch: Branch,
 ) {
     private val repo: Repository = git.repository
+    // some CI platforms make "fake" or "synthetic" commit for PR
+    // (they use the result of source branch merged into target branch)
+    // that's why calculating <HEAD> will sometimes be invalid, and we need to use heuristics, for example:
+    // GITHUB -> GITHUB_SHA (merge-commit), github.event.pull_request.head.sha
     private val headCommit = RevWalk(repo).use {
         it.parseCommit(repo.resolve("HEAD"))
     }
