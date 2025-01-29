@@ -27,14 +27,6 @@ public class Branch(git: Git, public val ref: Ref) {
         var count = 0
         var endFound = false
 
-        gitLog.forEach {
-            println(it.name + " ___ " + it.shortMessage)
-        }
-
-        println("BR:::::: ${ref.name}")
-        println(System.getenv("github.event.pull_request.head.sha"))
-        println(System.getenv("GITHUB_SHA"))
-
         for (commitInBranch in gitLog) {
             // check for the endCommit first since the log is reversed
             if (commitInBranch.id.name == endCommit.id.name) {
