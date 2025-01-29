@@ -151,9 +151,11 @@ public class VersionCalculator(
             )
 
         println("HEAD: ${headCommit.name}")
+        println("HEAD: ${headCommit.parentCount}")
         println("PARENT: ${headCommit.getParent(0)}")
-        println("PARENT: ${headCommit.getParent(1)}")
-        println("PARENT: ${headCommit.getParent(2)}")
+        if (headCommit.parentCount > 1) {
+            println("PARENT: ${headCommit.getParent(1)}")
+        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
