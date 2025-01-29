@@ -15,13 +15,21 @@ public class VersionCalculator(
     private val currentCheckoutBranch: Branch,
 ) {
     private val repo: Repository = git.repository
-    // some CI platforms make "fake" or "synthetic" commit for PR
-    // (they use the result of source branch merged into target branch)
-    // that's why calculating <HEAD> will sometimes be invalid, and we need to use heuristics, for example:
-    // GITHUB -> GITHUB_SHA (merge-commit), github.event.pull_request.head.sha
-    // GITLAB -> CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
+    // some CI platforms create "fake" or "synthetic" merge commit for PR
+    // (to check that final build works well, they use the result of source branch merged into target branch)
+    // that's why calculating <HEAD> will sometimes be invalid (it will be a hash of synthetic merge commit)
+    // HOWEVER! There is a great hack: we know hash codes of both parents: of source and target branches
     private val headCommit = RevWalk(repo).use {
-        it.parseCommit(repo.resolve("HEAD"))
+        val realHeadOrMergeCommit = it.parseCommit(repo.resolve("HEAD"))
+        // if it has two parents - then it is a merge commit
+        // we also need to check that it is not present in the currentCheckoutBranch (meaning, that it is a synthetic commit)
+        if (realHeadOrMergeCommit.parentCount > 1 && !currentCheckoutBranch.gitLog.contains(realHeadOrMergeCommit)) {
+            // parent == 0 -> commit from target branch (usually main)
+            // parent == 1 -> commit from source branch
+            realHeadOrMergeCommit.getParent(1)
+        } else {
+            realHeadOrMergeCommit
+        }
     }
 
     public fun calc(): SemVer =
@@ -150,12 +158,6 @@ public class VersionCalculator(
                         "and that is an inconsistent git state."
             )
 
-        println("HEAD: ${headCommit.name}")
-        println("HEAD: ${headCommit.parentCount}")
-        println("PARENT: ${headCommit.getParent(0)}")
-        if (headCommit.parentCount > 1) {
-            println("PARENT: ${headCommit.getParent(1)}")
-        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
