@@ -66,22 +66,28 @@ public class Branch(git: Git, public val ref: Ref) {
      *            6
      *
      *  The base commit is 2.
+     *
+     *  (!) IMPORTANT: the real problem with that approach is not to be confused by MERGE commits, which are present in
+     *  both branches: original (main) and sub-branch. That's we you always need to track LAST seen common commit.
+     *  And the only way to do it is to go from the initial commit in main to the latest commit.
      */
     public fun intersectionCommitWithBranch(sourceBase: Branch): RevCommit? {
-        // (!) gitLog is always in a reversed order (from last to first commit):
-        // 4 3 2 1
-        // 6 5 2
-        // ^ 6 not found
-        //   ^ 5 not found
-        //     ^ 2 - is a common commit
-        this.gitLog.forEach { commitInSub ->
-            val thisCommitInMainBranch = sourceBase.gitLog.firstOrNull { commitInSub.id.name == it.id.name }
-            if (thisCommitInMainBranch != null) {
-                return thisCommitInMainBranch
+        var previousCommit: RevCommit? = null
+
+        // iterate from oldest to newest in sourceBase branch (main)
+        for (commitInSub in this.gitLog.reversed()) {
+            // find the first commit that is not present in main branch, but is there in sub-branch
+            if (!sourceBase.gitLog.contains(commitInSub)) {
+                // return the previous commit, before the first missing commit
+                return previousCommit
+            } else {
+                previousCommit = commitInSub
             }
         }
 
-        return null
+        // no intersection found (should not happen in a properly branched repo)
+        // so the only case when it can happen - when branches are equal (first creation)
+        return previousCommit
     }
 
     override fun equals(other: Any?): Boolean {

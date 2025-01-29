@@ -53,6 +53,11 @@ To create local release tag, local release branch, calculate and return version,
 
 ## Vercraft in CI
 
+**Important:** Vercraft uses branches and git history for the calculation of version. 
+So for a proper work, you need to do the following setup: \ 
+Github: set fetch-depth: 0 in checkout action. \
+Gitlab: set GIT_DEPTH: 0 in your particular job.
+
 All modern CI platforms check out a specific commit to execute their actions. 
 This places the repository in a “detached HEAD” state, meaning Vercraft cannot automatically determine the current branch 
 you’re working with.

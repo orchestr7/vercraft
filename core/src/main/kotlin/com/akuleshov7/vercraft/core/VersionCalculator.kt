@@ -9,7 +9,7 @@ import java.util.*
 import kotlin.math.min
 
 public class VersionCalculator(
-    git: Git,
+    public val git: Git,
     private val config: Config,
     private val releases: Releases,
     private val currentCheckoutBranch: Branch,
@@ -141,7 +141,7 @@ public class VersionCalculator(
             val commit: RevCommit = walk.parseCommit(headCommit)
 
             val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-            dateFormat.timeZone = TimeZone.getDefault()
+            dateFormat.timeZone = TimeZone.getTimeZone("UTC")
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
             return SemVer(NO_MAJOR, NO_MINOR, distance)
@@ -151,6 +151,10 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Int {
+        releases.mainBranch.gitLog.forEachIndexed { i, c ->
+            println(i.toString() + " " + c.name + "____" + c.shortMessage)
+        }
+
         val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
@@ -158,6 +162,10 @@ public class VersionCalculator(
                         "and that is an inconsistent git state."
             )
 
+        println("BASE IN MAIN:" + baseCommit.name)
+        currentCheckoutBranch.gitLog.forEachIndexed { i, c ->
+            println(i.toString() + " " + c.name + "____" + c.shortMessage)
+        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
