@@ -19,6 +19,7 @@ public class VersionCalculator(
     // (they use the result of source branch merged into target branch)
     // that's why calculating <HEAD> will sometimes be invalid, and we need to use heuristics, for example:
     // GITHUB -> GITHUB_SHA (merge-commit), github.event.pull_request.head.sha
+    // GITLAB -> CI_MERGE_REQUEST_SOURCE_BRANCH_SHA
     private val headCommit = RevWalk(repo).use {
         it.parseCommit(repo.resolve("HEAD"))
     }
@@ -149,6 +150,8 @@ public class VersionCalculator(
                         "and that is an inconsistent git state."
             )
 
+        println("HEAD: ${headCommit.name}")
+        println("PARENT: ${headCommit.getParent(0)}")
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
