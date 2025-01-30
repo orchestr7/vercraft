@@ -9,14 +9,27 @@ import java.util.*
 import kotlin.math.min
 
 public class VersionCalculator(
-    git: Git,
+    public val git: Git,
     private val config: Config,
     private val releases: Releases,
     private val currentCheckoutBranch: Branch,
 ) {
     private val repo: Repository = git.repository
+    // some CI platforms create "fake" or "synthetic" merge commit for PR
+    // (to check that final build works well, they use the result of source branch merged into target branch)
+    // that's why calculating <HEAD> will sometimes be invalid (it will be a hash of synthetic merge commit)
+    // HOWEVER! There is a great hack: we know hash codes of both parents: of source and target branches
     private val headCommit = RevWalk(repo).use {
-        it.parseCommit(repo.resolve("HEAD"))
+        val realHeadOrMergeCommit = it.parseCommit(repo.resolve("HEAD"))
+        // if it has two parents - then it is a merge commit
+        // we also need to check that it is not present in the currentCheckoutBranch (meaning, that it is a synthetic commit)
+        if (realHeadOrMergeCommit.parentCount > 1 && !currentCheckoutBranch.gitLog.contains(realHeadOrMergeCommit)) {
+            // parent == 0 -> commit from target branch (usually main)
+            // parent == 1 -> commit from source branch
+            realHeadOrMergeCommit.getParent(1)
+        } else {
+            realHeadOrMergeCommit
+        }
     }
 
     public fun calc(): SemVer =
@@ -128,7 +141,7 @@ public class VersionCalculator(
             val commit: RevCommit = walk.parseCommit(headCommit)
 
             val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-            dateFormat.timeZone = TimeZone.getDefault()
+            dateFormat.timeZone = TimeZone.getTimeZone("UTC")
             val formattedDate = dateFormat.format(Date(commit.commitTime * 1000L))
 
             return SemVer(NO_MAJOR, NO_MINOR, distance)
@@ -138,6 +151,10 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Int {
+        releases.mainBranch.gitLog.forEachIndexed { i, c ->
+            println(i.toString() + " " + c.name + "____" + c.shortMessage)
+        }
+
         val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
@@ -145,6 +162,10 @@ public class VersionCalculator(
                         "and that is an inconsistent git state."
             )
 
+        println("BASE IN MAIN:" + baseCommit.name)
+        currentCheckoutBranch.gitLog.forEachIndexed { i, c ->
+            println(i.toString() + " " + c.name + "____" + c.shortMessage)
+        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
