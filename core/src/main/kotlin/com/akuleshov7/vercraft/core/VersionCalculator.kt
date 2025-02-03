@@ -151,10 +151,6 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Int {
-        releases.mainBranch.gitLog.forEachIndexed { i, c ->
-            println(i.toString() + " " + c.name + "____" + c.shortMessage)
-        }
-
         val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
@@ -162,10 +158,6 @@ public class VersionCalculator(
                         "and that is an inconsistent git state."
             )
 
-        println("BASE IN MAIN:" + baseCommit.name)
-        currentCheckoutBranch.gitLog.forEachIndexed { i, c ->
-            println(i.toString() + " " + c.name + "____" + c.shortMessage)
-        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }
