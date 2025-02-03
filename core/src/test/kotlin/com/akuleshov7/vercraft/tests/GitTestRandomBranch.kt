@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft.tests
 
+import com.akuleshov7.vercraft.core.CheckoutBranch
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.Releases
@@ -20,7 +21,7 @@ class GitTestRandomBranch {
     fun `initial commit test branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, INITIAL_COMMIT_TEST_BRANCH)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/test"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("2025-01-22-test-0-650c9", resultedVer.toString())
@@ -31,7 +32,7 @@ class GitTestRandomBranch {
     fun `first commit test branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, FIRST_COMMIT_TEST_BRANCH)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/test"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("2025-01-22-test-1-fea9e", resultedVer.toString())
@@ -42,7 +43,7 @@ class GitTestRandomBranch {
     fun `second commit test branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, SECOND_COMMIT_TEST_BRANCH)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/test"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("2025-01-22-test-2-d5e2a", resultedVer.toString())
@@ -53,7 +54,7 @@ class GitTestRandomBranch {
     fun `last commit test branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, LAST_COMMIT_TEST_BRANCH)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/test"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("2025-01-22-test-4-70982", resultedVer.toString())
@@ -81,7 +82,7 @@ class GitTestRandomBranch {
             assertEquals("2025-01-22-test-4-70982", resultedVer.toString())
 
             git.checkout()
-                .setName(DefaultConfig.defaultMainBranch)
+                .setName(DefaultConfig.defaultMainBranch.value)
                 .call()
 
             git.branchDelete()

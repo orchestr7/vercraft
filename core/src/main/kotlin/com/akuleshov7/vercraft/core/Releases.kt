@@ -27,7 +27,7 @@ public data class ReleaseBranch(
     val branch: Branch,
 ) {
     public constructor(branch: Branch, config: Config) : this(
-        SemVer(branch.ref.name.shortName(config.remote)),
+        SemVer(branch.ref.name.shortName(config.remote.value)),
         branch
     )
 }
@@ -42,7 +42,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = findBranch(config.defaultMainBranch)
+    public val mainBranch: Branch = findBranch(config.defaultMainBranch.value)
         ?: throw IllegalStateException(
             "${config.defaultMainBranch} branch cannot be found in current git repo. " +
                     "Please check your fetched branches and fetch-depth (CI platforms usually limit it."
@@ -61,6 +61,7 @@ public class Releases public constructor(private val git: Git, private val confi
             )
 
             val branchName = config.checkoutBranch
+                ?.value
                 ?: System.getenv(GITLAB_BRANCH_REF)
                 ?: System.getenv(GITHUB_HEAD_REF)
                 ?: System.getenv(BITBUCKET_BRANCH)
@@ -116,8 +117,8 @@ public class Releases public constructor(private val git: Git, private val confi
 
                 if (latestRelease == null) {
                     // if there have been no releases yet, we will simply create a patch tag on main/master
-                    git.checkout().setName(config.defaultMainBranch).call()
-                    createTag(VersionCalculator(git, config, this, findBranch(config.defaultMainBranch)!!).calc())
+                    git.checkout().setName(config.defaultMainBranch.value).call()
+                    createTag(VersionCalculator(git, config, this, findBranch(config.defaultMainBranch.value)!!).calc())
                 } else {
                     // otherwise - we will check out release branch and tag latest commit
                     git.checkout().setName(latestRelease.branch.ref.name).call()
@@ -177,7 +178,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
         // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
         val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
-            .groupBy { it.branch.ref.name.shortName(config.remote) }
+            .groupBy { it.branch.ref.name.shortName(config.remote.value) }
 
         allReleaseBranches.keys.forEach {
             val value = allReleaseBranches[it]
@@ -199,7 +200,7 @@ public class Releases public constructor(private val git: Git, private val confi
         listBranchCommand.call()
             .toHashSet()
             .filter {
-                val branchName = it.name.shortName(config.remote)
+                val branchName = it.name.shortName(config.remote.value)
                 branchName.hasReleasePrefix() && branchName.removeReleasePrefix().isValidSemVerFormat()
             }
             .map { ReleaseBranch(Branch(git, it), config) }

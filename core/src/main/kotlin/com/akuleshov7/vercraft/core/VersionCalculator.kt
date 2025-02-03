@@ -35,7 +35,7 @@ public class VersionCalculator(
     public fun calc(): SemVer =
         when {
             currentCheckoutBranch.ref.name
-                .shortName(config.remote) == config.defaultMainBranch -> calcVersionInMain()
+                .shortName(config.remote.value) == config.defaultMainBranch.value -> calcVersionInMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
         }

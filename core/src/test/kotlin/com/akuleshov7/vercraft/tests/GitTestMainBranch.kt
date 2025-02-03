@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft.tests
 
+import com.akuleshov7.vercraft.core.CheckoutBranch
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.Releases
@@ -18,7 +19,7 @@ class GitTestMainBranch {
     fun `detached commit from main right after the release but not the last in main`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, DETACHED_COMMIT_RIGHT_AFTER_RELEASE)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "main"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.2.1-main+4b3a6", resultedVer.toString())
@@ -29,7 +30,7 @@ class GitTestMainBranch {
     fun `detached commit last in main`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, DETACHED_COMMIT_1_AFTER_RELEASE_MAIN)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "main"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.2.2-main+9f4c9", resultedVer.toString())
@@ -40,7 +41,7 @@ class GitTestMainBranch {
     fun `just main was checked-out`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, "main")
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "main"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.2.2-main+9f4c9", resultedVer.toString())
@@ -51,7 +52,7 @@ class GitTestMainBranch {
     fun `release 1 1 0 commit but on main`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, RELEASE_1_1_0_COMMIT_MAIN)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "main"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.2.0-main+9e2e2", resultedVer.toString())
