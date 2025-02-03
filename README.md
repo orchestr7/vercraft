@@ -15,9 +15,16 @@ In case you don't have much time for this - at least spend 5 seconds to give us 
 ## Quick start
 No boring configuration, add the following plugin to your **parent** build.gradle(kts):
 ```kotlin
+pluginManagement {
+    repositories {
+        // Vercraft plugin is hosted on Maven Central
+        mavenCentral()
+    }
+}
+
 plugins {
     // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.3.0")
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.4.0")
 }
 
 // (!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`.
@@ -31,6 +38,9 @@ To create local release tag, local release branch, calculate and return version,
 # to create a release branch with a newly calculated MINOR version
 ./gradlew makeRelease -PreleaseType=MINOR
 
+# to find latest release branch and mark latest commit with PATCH version
+./gradlew makeRelease -PreleaseType=PATCH
+
 # (!) Note: `makeRelease` task also pushes release tag and branch to remote git hosting.
 ```
 
@@ -41,13 +51,36 @@ To create local release tag, local release branch, calculate and return version,
 ./gradlew gitVersion
 ```
 
+## Vercraft in CI
+
+**(!) Important:** Vercraft uses branches and git history for the calculation of version. 
+So for a proper work, you need to do the following setup:
+
+✅Github: set fetch-depth: 0 in checkout action \
+✅ Gitlab: set GIT_DEPTH: 0 in your particular job 
+
+All modern CI platforms check out a specific commit to execute their actions. 
+This places the repository in a “detached HEAD” state, meaning Vercraft cannot automatically determine the current branch 
+you’re working with.
+
+However, CI platforms from major Git hosting providers propagate the original branch name used in MRs/PRs, 
+or as the trigger for a CI action. They achieve this using special environment variables, which Vercraft automatically 
+detects and utilizes:
+
+✅ GitHub: GITHUB_HEAD_REF \
+✅ GitLab: CI_COMMIT_REF_NAME \
+✅ Bitbucket: BITBUCKET_BRANCH
+
+💡For other CI platforms, please ensure you **manually set** the VERCRAFT_BRANCH environment variable.
+
+
 ## Supported Build Tools
 ✅ **Gradle** \
 🚧 **Maven** (coming soon)
 
 
 ## How it works
-VerCraft automatically calculates the version for your currently checked-out commit. 
+VerCraft automatically calculates the version for your currently checked-out ref (commit or branch). 
 It determines the version based solely on two factors: the currently checked-out branch and release branches 
 (branches with the release/ prefix) present in your project’s Git log.
 
@@ -60,7 +93,13 @@ distance from that point to the current commit to generate the version.
 The only requirement VerCraft imposes is the use of `release/` branches in your delivery process. 
 No need for extra tags on every commit or any redundant steps - just clean and efficient version management.
 
-![docs/example.png](docs/example.png)
+(!) Important: `release/` branches are actively used in Vercraft to calculate versions, so you **should not** delete them 
+(at least latest one) from your repository's git log.
+
+![docs/gitVersion.png](docs/gitVersion.png)
+
+![docs/makeRelease.png](docs/makeRelease.png)
+
 
 ## Why Choose VerCraft
 There are already several great tools like `gradle-plugin-versionest`, `reckon`, `JGitver`, and `nebula-release-plugin` 

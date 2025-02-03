@@ -6,7 +6,7 @@ import java.io.File
 
 private val logger = LogManager.getLogger()
 
-public fun getVersion(gitPath: File, config: Config): String {
+public fun gitVersion(gitPath: File, config: Config): String {
     Git.open(gitPath).use { git ->
         val releases = Releases(git, config)
         val resultedVer = releases.version.calc()
@@ -30,4 +30,8 @@ public fun createRelease(gitPath: File, version: SemVer, config: Config): String
     }
 
     return version.toString()
+}
+
+public fun main() {
+    gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/readme"))
 }

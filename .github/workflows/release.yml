@@ -12,7 +12,7 @@ env:
   SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
 
 jobs:
-  release:
+  central_release:
     name: Build release
     runs-on: ${{ matrix.os }}
     strategy:
@@ -22,8 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive # Clone all submodules, including nested ones
-          fetch-depth: 0        # Ensure the full history is fetched
+          # Clone all submodules, including nested ones (needed for tests)
+          submodules: recursive
+          # Ensure the full history is fetched
+          fetch-depth: 0
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -45,4 +47,19 @@ jobs:
       - name: Status git after
         if: ${{ always() }}
         run: git status
-        # TODO: add github releases
+
+    github_release:
+      needs: release
+      name: Create Github Release
+      runs-on: ubuntu-latest
+      steps:
+        - name: Create Github Release
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ github.ref }}
+            release_name: Release ${{ github.ref }}
+            draft: false
+            prerelease: false
