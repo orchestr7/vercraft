@@ -3,7 +3,6 @@ import com.akuleshov7.buildutils.configurePom
 plugins {
     kotlin("jvm")
     id("java-gradle-plugin")
-    // id("com.gradle.plugin-publish") version "1.2.1"
     id("com.akuleshov7.buildutils.publishing-default-configuration")
 }
 
