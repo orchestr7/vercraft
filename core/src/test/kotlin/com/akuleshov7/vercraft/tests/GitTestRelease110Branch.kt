@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft.tests
 
+import com.akuleshov7.vercraft.core.CheckoutBranch
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.Releases
@@ -18,7 +19,7 @@ class GitTestRelease110Branch {
     fun `release 1 1 0 commit but on release branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, RELEASE_1_1_0_COMMIT_MAIN)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "release/1.1.0"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.1.0", resultedVer.toString())
@@ -29,7 +30,7 @@ class GitTestRelease110Branch {
     fun `first commit in release 1 1 0, no local branch`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, FIRST_COMMIT_IN_RELEASE_1_1_0)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "release/1.1.0"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.1.1", resultedVer.toString())
@@ -52,13 +53,13 @@ class GitTestRelease110Branch {
             }
 
             checkoutRef(git, FIRST_COMMIT_IN_RELEASE_1_1_0)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "release/1.1.0"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.1.1", resultedVer.toString())
 
             git.checkout()
-                .setName(DefaultConfig.defaultMainBranch)
+                .setName(DefaultConfig.defaultMainBranch.value)
                 .call()
 
             git.branchDelete()
@@ -72,7 +73,7 @@ class GitTestRelease110Branch {
     fun `second commit in release 1 1 0`() {
         Git.open(File("src/test/resources/vercraft-test")).use { git ->
             checkoutRef(git, SECOND_COMMIT_IN_RELEASE_1_1_0)
-            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "release/1.1.0"))
+            val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
             println(resultedVer)
             assertEquals("1.1.2", resultedVer.toString())
@@ -100,7 +101,7 @@ class GitTestRelease110Branch {
             assertEquals("1.1.3", resultedVer.toString())
 
             git.checkout()
-                .setName(DefaultConfig.defaultMainBranch)
+                .setName(DefaultConfig.defaultMainBranch.value)
                 .call()
 
             git.branchDelete()

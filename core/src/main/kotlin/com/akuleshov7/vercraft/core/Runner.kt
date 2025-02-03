@@ -33,5 +33,5 @@ public fun createRelease(gitPath: File, version: SemVer, config: Config): String
 }
 
 public fun main() {
-    gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/readme"))
+    gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/readme")))
 }
