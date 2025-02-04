@@ -6,7 +6,6 @@ import org.eclipse.jgit.lib.Constants
  * Configuration class for all logic in VerCraft,
  * usually is passed to VerCraft with plugin
  */
-// TODO: migrate to value classes
 public data class Config(
     val defaultMainBranch: DefaultMainBranch = DefaultMainBranch("main"),
     val remote: Remote = Remote(Constants.DEFAULT_REMOTE_NAME),

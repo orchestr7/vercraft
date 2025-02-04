@@ -34,7 +34,7 @@ public class VersionCalculator(
 
     public fun calc(): SemVer =
         when {
-            currentCheckoutBranch.ref.name
+            currentCheckoutBranch.ref!!.name
                 .shortName(config.remote.value) == config.defaultMainBranch.value -> calcVersionInMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
@@ -60,7 +60,7 @@ public class VersionCalculator(
         val latestRelease = releases.getLatestReleaseBranch()
         // if no releases were made so far, then will calculate version starting from the initial commit
         // TODO: latest release should be calculated relatively to the HEAD commit
-        val baseCommit = latestRelease?.branch
+        val baseCommit = latestRelease
             ?.intersectionCommitWithBranch(currentCheckoutBranch)
             ?: currentCheckoutBranch.gitLog.last()
 
@@ -105,11 +105,11 @@ public class VersionCalculator(
      */
     private fun calcVersionInRelease(): SemVer {
         val distance = distanceFromMainBranch()
-        return releases.releaseBranches.find { it.branch == currentCheckoutBranch }
+        return releases.releaseBranches.find { it == currentCheckoutBranch }
             ?.version
             ?.incrementPatchVersion(distance)
             ?: throw IllegalStateException(
-                "Cannot find branch ${currentCheckoutBranch.ref.name} in the list of release branches:" +
+                "Cannot find branch ${currentCheckoutBranch.ref!!.name} in the list of release branches:" +
                         "${releases.releaseBranches}"
             )
     }
@@ -130,7 +130,7 @@ public class VersionCalculator(
      */
     private fun calcVersionInBranch(): SemVer {
         // replace all special symbols except letters and digits from branch name and limit it to 10 symbols
-        val branchName = currentCheckoutBranch.ref.name.substringAfterLast("/")
+        val branchName = currentCheckoutBranch.ref!!.name.substringAfterLast("/")
         val branch = branchName
             .substring(0, min(branchName.length, 10))
             .replace("[^A-Za-z0-9]".toRegex(), "")
@@ -151,10 +151,10 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Int {
-        val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
+        val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.defaultMainBranch)
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
-                        "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
+                        "and ${currentCheckoutBranch.ref!!.name} branches. Looks like these branches have no relation " +
                         "and that is an inconsistent git state."
             )
 

@@ -6,10 +6,24 @@ import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
-import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 
 internal const val RELEASE_PREFIX = "release"
+
+internal const val WARN_BRANCH_NAME = "$WARN_PREFIX your current HEAD is detached (no branch is checked out). " +
+        "Usually this happens on CI platforms, which check out particular commit. " +
+        "Vercraft will try to resolve branch name using known CI ENV variables: " +
+        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH. " +
+        "You can also set it explicitly by $VERCRAFT_BRANCH."
+
+internal const val ERROR_MISSING_BRANCH_NAME = "$ERROR_PREFIX following variables are not defined in current env " +
+        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH " +
+        "Please pass the branch name which you are trying to process (check-out) now explicitly " +
+        "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
+
+internal const val ERROR_BRANCH_DETECTION = "Current HEAD is detached and CI env variables with " +
+        "the branch name are not set, so not able to determine the original branch name and calculate the version."
 
 /**
  * Removal of prefixes: "refs/heads/", "refs/remotes/origin", "refs/tags/".
@@ -22,14 +36,13 @@ internal fun String.shortName(remoteName: String) =
 internal fun String.removeReleasePrefix() = this.substringAfterLast("$RELEASE_PREFIX/")
 internal fun String.hasReleasePrefix() = this.startsWith("$RELEASE_PREFIX/")
 
-public data class ReleaseBranch(
-    val version: SemVer,
-    val branch: Branch,
-) {
-    public constructor(branch: Branch, config: Config) : this(
-        SemVer(branch.ref.name.shortName(config.remote.value)),
-        branch
-    )
+public class ReleaseBranch(
+    git: Git,
+    config: Config,
+    ref: Ref,
+    defaultMainBranch: Branch?
+) : Branch(git, ref, defaultMainBranch) {
+    public val version: SemVer = SemVer(ref.name.shortName(config.remote.value))
 }
 
 /**
@@ -42,51 +55,21 @@ public class Releases public constructor(private val git: Git, private val confi
 
     private val repo: Repository = git.repository
 
-    public val mainBranch: Branch = findBranch(config.defaultMainBranch.value)
-        ?: throw IllegalStateException(
-            "${config.defaultMainBranch} branch cannot be found in current git repo. " +
+    public val defaultMainBranch: Branch = Branch(git, config, config.defaultMainBranch.value).also {
+        it.ref ?: throw IllegalStateException(
+            "${config.defaultMainBranch.value} branch cannot be found in current git repo. " +
                     "Please check your fetched branches and fetch-depth (CI platforms usually limit it."
         )
+    }
 
     public val releaseBranches: MutableSet<ReleaseBranch> = findReleaseBranches()
 
-    private val currentBranch = findBranch(repo.branch)
-        ?: run {
-            logger.warn(
-                "$WARN_PREFIX your current HEAD is detached (no branch is checked out). " +
-                        "Usually this happens on CI platforms, which check out particular commit. " +
-                        "Vercraft will try to resolve branch name using known CI ENV variables: " +
-                        "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH. " +
-                        "You can also set it explicitly by $VERCRAFT_BRANCH."
-            )
-
-            val branchName = config.checkoutBranch
-                ?.value
-                ?: System.getenv(GITLAB_BRANCH_REF)
-                ?: System.getenv(GITHUB_HEAD_REF)
-                ?: System.getenv(BITBUCKET_BRANCH)
-                ?: System.getenv(VERCRAFT_BRANCH)
-                ?: run {
-                    logger.warn(
-                        "$ERROR_PREFIX following variables are not defined in current env " +
-                                "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH " +
-                                "Please pass the branch name which you are trying to process (check-out) now explicitly " +
-                                "to VerCraft by setting ENV variable \$VERCRAFT_BRANCH. "
-                    )
-                    throw NullPointerException(
-                        "Current HEAD is detached and CI env variables with the branch name are not set, so " +
-                                "not able to determine the original branch name."
-                    )
-                }
-
-            findBranch(branchName)
-                ?: throw IllegalArgumentException("Cannot find <$branchName> in the list of remote or local branches.")
-        }
+    private val currentBranch = setCurrentBranch()
 
     public val version: VersionCalculator = VersionCalculator(git, config, this, currentBranch)
 
     public fun isReleaseBranch(branch: Branch): Boolean =
-        releaseBranches.find { it.branch.ref == branch.ref } != null
+        releaseBranches.find { it.ref == branch.ref } != null
 
     // TODO: latest release should be calculated relatively to the HEAD commit
     public fun getLatestReleaseBranch(): ReleaseBranch? =
@@ -101,10 +84,10 @@ public class Releases public constructor(private val git: Git, private val confi
             ?.nextVersion(releaseType)
             ?: version.calc().nextVersion(releaseType)
 
-        if (currentBranch != mainBranch) {
+        if (currentBranch != defaultMainBranch) {
             throw IllegalStateException(
-                "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref.name}], " +
-                        "but ${releaseType.name} release should always be done from [${mainBranch.ref.name}] branch. " +
+                "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref?.name}], " +
+                        "but ${releaseType.name} release should always be done from [${defaultMainBranch.ref?.name}] branch. " +
                         "Because during the release VerCraft will create a new branch and tag."
             )
         } else {
@@ -118,11 +101,18 @@ public class Releases public constructor(private val git: Git, private val confi
                 if (latestRelease == null) {
                     // if there have been no releases yet, we will simply create a patch tag on main/master
                     git.checkout().setName(config.defaultMainBranch.value).call()
-                    createTag(VersionCalculator(git, config, this, findBranch(config.defaultMainBranch.value)!!).calc())
+                    createTag(
+                        VersionCalculator(
+                            git,
+                            config,
+                            this,
+                            defaultMainBranch
+                        ).calc()
+                    )
                 } else {
                     // otherwise - we will check out release branch and tag latest commit
-                    git.checkout().setName(latestRelease.branch.ref.name).call()
-                    createTag(VersionCalculator(git, config, this, latestRelease.branch).calc())
+                    git.checkout().setName(latestRelease.ref!!.name).call()
+                    createTag(VersionCalculator(git, config, this, latestRelease).calc())
                 }
 
             } else {
@@ -138,7 +128,7 @@ public class Releases public constructor(private val git: Git, private val confi
         if (releaseBranches.map { it.version }.contains(version)) {
             logger.warn(
                 "$ERROR_PREFIX The branch with the version [$version] which was selected for " +
-                        "the new release already exists. No branches will be created, please change the version."
+                        "the new release already exists. No new branches will be created, please select the proper version."
             )
         } else {
             createBranch(version)
@@ -153,16 +143,48 @@ public class Releases public constructor(private val git: Git, private val confi
             .setMessage("Release ${newVersion.justSemVer()}")
             .call()
 
-        logger.warn("+ Created a tag v${newVersion.justSemVer()} " +
-                "[Release ${newVersion.justSemVer()}], original version is $newVersion"
+        logger.warn(
+            "+ Created a tag v${newVersion.justSemVer()} " +
+                    "[Release ${newVersion.justSemVer()}], original version is $newVersion"
         )
+    }
+
+    /**
+     * Getting the name of the current branch name used in PR/MR or currently checked-out.
+     * The algorithm is the following:
+     * 1) First try to get a checkout branch.
+     * 2) If HEAD is detouched (no branch is checked-out), then will use env variables set by CI.
+     * 3) Try to use VERCRAFT_BRANCH env variable.
+     */
+    private fun setCurrentBranch(): Branch {
+        // repo.branch == null when the HEAD is detouched
+        return if (repo.branch == null) {
+            logger.info(WARN_BRANCH_NAME)
+
+            val branchName = config.checkoutBranch
+                ?.value
+                ?: System.getenv(GITLAB_BRANCH_REF)
+                ?: System.getenv(GITHUB_HEAD_REF)
+                ?: System.getenv(BITBUCKET_BRANCH)
+                ?: System.getenv(VERCRAFT_BRANCH)
+                ?: run {
+                    logger.warn(ERROR_MISSING_BRANCH_NAME)
+                    throw NullPointerException(ERROR_BRANCH_DETECTION)
+                }
+
+            Branch(git, config, branchName).also {
+                it.ref ?: throw IllegalArgumentException("Cannot find $branchName in the list branches (remote/local).")
+            }
+        } else {
+            Branch(git, config, repo.branch)
+        }
     }
 
     private fun createBranch(newVersion: SemVer) {
         git.branchCreate()
             .setName("release/$newVersion")
             .call()
-            .also { releaseBranches.add(ReleaseBranch(Branch(git, it), config)) }
+            .also { releaseBranches.add(ReleaseBranch(git, config, it, defaultMainBranch)) }
 
         logger.warn("+ Created a branch [release/$newVersion]")
     }
@@ -178,12 +200,12 @@ public class Releases public constructor(private val git: Git, private val confi
 
         // we will make a union of LOCAL branches and REMOTE, with a priority to LOCAL
         val allReleaseBranches = (localReleaseBranches + releaseBranchesFromRemote)
-            .groupBy { it.branch.ref.name.shortName(config.remote.value) }
+            .groupBy { it.ref!!.name.shortName(config.remote.value) }
 
         allReleaseBranches.keys.forEach {
             val value = allReleaseBranches[it]
             if (value!!.size > 1) {
-                if (value[0].branch.gitLog != value[1].branch.gitLog) {
+                if (value[0].gitLog != value[1].gitLog) {
                     logger.warn(
                         "$ERROR_PREFIX Remote and local branches '$it' differ. " +
                                 "Do you have any non-pushed commits in your local branch? Will use " +
@@ -203,21 +225,6 @@ public class Releases public constructor(private val git: Git, private val confi
                 val branchName = it.name.shortName(config.remote.value)
                 branchName.hasReleasePrefix() && branchName.removeReleasePrefix().isValidSemVerFormat()
             }
-            .map { ReleaseBranch(Branch(git, it), config) }
+            .map { ReleaseBranch(git, config, it, defaultMainBranch) }
             .toHashSet()
-
-    /**
-     * It appeared that standard findRef is only checking local branches, so we will try to
-     * find ref first in local branches and then check that branch in the list of remote branches.
-     */
-    private fun findBranch(branch: String?): Branch? =
-        branch?.let {
-            val foundBranch = repo.findRef("${Constants.R_HEADS}$branch")
-                ?: repo.findRef("${Constants.R_REMOTES}${config.remote}/$branch")
-                ?: run {
-                    logger.warn("$WARN_PREFIX Cannot find branch ref <$branch> in current repository.")
-                    return null
-                }
-            Branch(git, foundBranch)
-        }
 }
