@@ -58,7 +58,8 @@ public class Releases public constructor(private val git: Git, private val confi
     public val defaultMainBranch: Branch = Branch(git, config, config.defaultMainBranch.value).also {
         it.ref ?: throw IllegalStateException(
             "${config.defaultMainBranch.value} branch cannot be found in current git repo. " +
-                    "Please check your fetched branches and fetch-depth (CI platforms usually limit it."
+                    "Please set defaultMainBranch and check your fetched branches and fetch-depth " +
+                    "(CI platforms usually limit it)."
         )
     }
 
@@ -158,7 +159,7 @@ public class Releases public constructor(private val git: Git, private val confi
      */
     private fun setCurrentBranch(): Branch {
         // repo.branch == null when the HEAD is detouched
-        return if (repo.branch == null) {
+        return if (repo.branch == null || Branch(git, config, repo.branch, defaultMainBranch).ref == null) {
             logger.info(WARN_BRANCH_NAME)
 
             val branchName = config.checkoutBranch
@@ -172,11 +173,11 @@ public class Releases public constructor(private val git: Git, private val confi
                     throw NullPointerException(ERROR_BRANCH_DETECTION)
                 }
 
-            Branch(git, config, branchName).also {
+            Branch(git, config, branchName, defaultMainBranch).also {
                 it.ref ?: throw IllegalArgumentException("Cannot find $branchName in the list branches (remote/local).")
             }
         } else {
-            Branch(git, config, repo.branch)
+            Branch(git, config, repo.branch, defaultMainBranch)
         }
     }
 

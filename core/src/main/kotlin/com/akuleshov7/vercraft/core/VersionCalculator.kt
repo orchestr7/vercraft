@@ -105,7 +105,7 @@ public class VersionCalculator(
      */
     private fun calcVersionInRelease(): SemVer {
         val distance = distanceFromMainBranch()
-        return releases.releaseBranches.find { it == currentCheckoutBranch }
+        return releases.releaseBranches.find { it.ref == currentCheckoutBranch.ref }
             ?.version
             ?.incrementPatchVersion(distance)
             ?: throw IllegalStateException(
@@ -151,7 +151,7 @@ public class VersionCalculator(
     }
 
     private fun distanceFromMainBranch(): Int {
-        val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.defaultMainBranch)
+        val baseCommit = currentCheckoutBranch.baseCommitInMain
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
                         "and ${currentCheckoutBranch.ref!!.name} branches. Looks like these branches have no relation " +

@@ -10,7 +10,7 @@ public const val GITHUB_HEAD_REF: String = "GITHUB_HEAD_REF"
 public const val BITBUCKET_BRANCH: String = "BITBUCKET_BRANCH"
 public const val VERCRAFT_BRANCH: String = "VERCRAFT_BRANCH"
 
-public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Branch?) {
+public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Branch? = null) {
     /**
      * Reversed list of commits from latest to earliest.
      */
@@ -28,9 +28,13 @@ public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Bran
         mainBranch
     )
 
-    public val baseCommitInMain: RevCommit = defaultMainBranch
-        ?.let { this.intersectionCommitWithBranch(it) }
-        ?: gitLog.last()
+    public val baseCommitInMain: RevCommit? = when {
+        // we are building Branch class based on default branch (main)
+        defaultMainBranch == null -> gitLog.last()
+        // detouched HEAD and this means we can return current commit
+        gitLog.isEmpty() -> null
+        else -> this.intersectionCommitWithBranch(defaultMainBranch)
+    }
 
     /**
      * Calculates the number of commits between two commits in a branch.
