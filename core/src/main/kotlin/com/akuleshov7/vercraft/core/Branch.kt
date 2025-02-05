@@ -1,6 +1,7 @@
 package com.akuleshov7.vercraft.core
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevCommit
 
@@ -9,9 +10,31 @@ public const val GITHUB_HEAD_REF: String = "GITHUB_HEAD_REF"
 public const val BITBUCKET_BRANCH: String = "BITBUCKET_BRANCH"
 public const val VERCRAFT_BRANCH: String = "VERCRAFT_BRANCH"
 
-public class Branch(git: Git, public val ref: Ref) {
-    public val gitLog: List<RevCommit> = git.log().add(ref.objectId).call().toList()
+public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Branch? = null) {
+    /**
+     * Reversed list of commits from latest to earliest.
+     */
+    public val gitLog: List<RevCommit> = ref?.let { git.log().add(it.objectId).call().toList() } ?: emptyList()
 
+    public constructor(git: Git, config: Config, name: String, mainBranch: Branch? = null) : this(
+        git,
+        /**
+         * It appeared that standard findRef is only checking local branches, so we will try to
+         * find ref first in local branches and then check that branch in the list of remote branches.
+         */
+        git.repository.findRef("${Constants.R_HEADS}$name")
+            ?: git.repository.findRef("${Constants.R_REMOTES}${config.remote}/$name"),
+
+        mainBranch
+    )
+
+    public val baseCommitInMain: RevCommit? = when {
+        // we are building Branch class based on default branch (main)
+        defaultMainBranch == null -> gitLog.last()
+        // detouched HEAD and this means we can return current commit
+        gitLog.isEmpty() -> null
+        else -> this.intersectionCommitWithBranch(defaultMainBranch)
+    }
 
     /**
      * Calculates the number of commits between two commits in a branch.
@@ -29,9 +52,7 @@ public class Branch(git: Git, public val ref: Ref) {
 
         for (commitInBranch in gitLog) {
             // check for the endCommit first since the log is reversed
-            if (commitInBranch.id.name == endCommit.id.name) {
-                endFound = true
-            }
+            if (commitInBranch.id.name == endCommit.id.name) endFound = true
 
             if (commitInBranch.id.name == startCommit.id.name) {
                 if (!endFound) {
@@ -44,9 +65,7 @@ public class Branch(git: Git, public val ref: Ref) {
                 return count
             }
 
-            if (endFound) {
-                ++count
-            }
+            if (endFound) ++count
         }
 
         // If we complete the loop without finding both commits, return -1
@@ -55,7 +74,6 @@ public class Branch(git: Git, public val ref: Ref) {
                     "nor commit ${endCommit.name.toString().substring(0, 5)}"
         )
     }
-
 
     /**
      * Finds the commit in [[sourceBase]] branch when a new sub-branch was created from it. For example:

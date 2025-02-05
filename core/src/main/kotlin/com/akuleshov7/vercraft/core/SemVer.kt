@@ -37,10 +37,13 @@ public class SemVer : Comparable<SemVer> {
     public val major: Int
     public val minor: Int
     public val patch: Int
-    public var prefix: String = ""
+    private var prefix: String = ""
     private var postfix: String = ""
 
-    public constructor(ver: String) {
+    public constructor(ver: String?) {
+        require(ver != null) {
+            throw IllegalArgumentException("Can't calculate SemVer version, as received 'null' input")
+        }
         val parts = ver.removeReleasePrefix().split(".").map { it.toInt() }
         require(parts.size == 3) {
             throw IllegalArgumentException("SemVer version [$this] must be in the following format: 'major.minor.patch'")
