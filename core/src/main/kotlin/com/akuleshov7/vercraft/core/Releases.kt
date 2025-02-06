@@ -3,11 +3,13 @@ package com.akuleshov7.vercraft.core
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import com.akuleshov7.vercraft.core.utils.WARN_PREFIX
 import org.apache.logging.log4j.LogManager
-import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
+import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.RevWalk
 
 internal const val RELEASE_PREFIX = "release"
 
@@ -69,6 +71,8 @@ public class Releases public constructor(private val git: Git, private val confi
 
     public val version: VersionCalculator = VersionCalculator(git, config, this, currentBranch)
 
+    private val currentCommit: RevCommit? = RevWalk(repo).use { it.parseCommit(repo.resolve("HEAD")) }
+
     public fun isReleaseBranch(branch: Branch): Boolean =
         releaseBranches.find { it.ref == branch.ref } != null
 
@@ -76,7 +80,7 @@ public class Releases public constructor(private val git: Git, private val confi
     public fun getLatestReleaseBranch(): ReleaseBranch? =
         releaseBranches.maxByOrNull { it.version }
 
-    // TODO: Not to create a release if we are now on main and on this commit there is already a release branch made
+    // TODO: add tests to cover makeRelease task
     public fun createNewRelease(releaseType: SemVerReleaseType): String {
         val latestRelease = getLatestReleaseBranch()
 
@@ -85,40 +89,49 @@ public class Releases public constructor(private val git: Git, private val confi
             ?.nextVersion(releaseType)
             ?: version.calc().nextVersion(releaseType)
 
-        if (currentBranch != defaultMainBranch) {
-            throw IllegalStateException(
+        when {
+            currentBranch != defaultMainBranch ->  throw IllegalStateException(
                 "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref?.name}], " +
-                        "but ${releaseType.name} release should always be done from [${defaultMainBranch.ref?.name}] branch. " +
-                        "Because during the release VerCraft will create a new branch and tag."
+                        "but ${releaseType.name} release should always be done from default [${defaultMainBranch.ref?.name}] " +
+                        "branch. This is required, because during the release VerCraft will create a new branch and tag."
             )
-        } else {
-            if (releaseType == SemVerReleaseType.PATCH) {
-                logger.warn(
-                    "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
-                            "will be created, as patch releases should be made only in existing release branch. " +
-                            if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
+
+            releaseBranches.map { it.baseCommitInMain }.contains(currentCommit) ->
+                throw IllegalStateException(
+                    "$ERROR_PREFIX Current checked-out commit already is associated with release branch " +
+                            "(release branch was already created from this commit). " +
+                            "Making a new release from this commit is pointless, please delete or use existing branch."
                 )
 
-                if (latestRelease == null) {
-                    // if there have been no releases yet, we will simply create a patch tag on main/master
-                    git.checkout().setName(config.defaultMainBranch.value).call()
-                    createTag(
-                        VersionCalculator(
-                            git,
-                            config,
-                            this,
-                            defaultMainBranch
-                        ).calc()
+            else -> {
+                if (releaseType == SemVerReleaseType.PATCH) {
+                    logger.warn(
+                        "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
+                                "will be created, as patch releases should be made only in existing release branch. " +
+                                if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
                     )
-                } else {
-                    // otherwise - we will check out release branch and tag latest commit
-                    git.checkout().setName(latestRelease.ref!!.name).call()
-                    createTag(VersionCalculator(git, config, this, latestRelease).calc())
-                }
 
-            } else {
-                createBranch(newVersion)
-                createTag(newVersion)
+                    if (latestRelease == null) {
+                        // if there have been no releases yet, we will simply create a patch tag on main/master
+                        git.checkout().setName(config.defaultMainBranch.value).call()
+                        createTag(
+                            VersionCalculator(
+                                git,
+                                config,
+                                this,
+                                defaultMainBranch
+                            ).calc()
+                        )
+                    } else {
+                        // otherwise - we will check out release branch and tag latest commit
+                        git.checkout().setName(latestRelease.ref!!.name).call()
+                        createTag(VersionCalculator(git, config, this, latestRelease).calc())
+                    }
+
+                } else {
+                    createBranch(newVersion)
+                    createTag(newVersion)
+                }
             }
         }
 
