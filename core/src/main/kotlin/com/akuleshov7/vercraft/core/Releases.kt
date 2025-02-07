@@ -55,7 +55,7 @@ public class ReleaseBranch(
 public class Releases public constructor(private val git: Git, private val config: Config) {
     private val logger = LogManager.getLogger(Releases::class.java)
 
-    private val repo: Repository = git.repository
+    public val repo: Repository = git.repository
 
     public val defaultMainBranch: Branch = Branch(git, config, config.defaultMainBranch.value).also {
         it.ref ?: throw IllegalStateException(
@@ -76,7 +76,30 @@ public class Releases public constructor(private val git: Git, private val confi
     public fun isReleaseBranch(branch: Branch): Boolean =
         releaseBranches.find { it.ref == branch.ref } != null
 
-    // TODO: latest release should be calculated relatively to the HEAD commit
+    /**
+     * Method helps to find the closest release branch before [commit] in [branch].
+     * For example, if we have releases R1 and R2, and we are trying to fing latest release for commit C:
+     * A - B - C - D - E -> [branch]
+     *     |       |
+     *     R1      R2
+     *
+     * The answer will be a branch R1 and commit B.
+     */
+    public fun getLatestReleaseForCommit(commit: RevCommit, branch: Branch): ReleaseBranch? {
+        var foundCommit = false
+        branch.gitLog.forEach { commitIterator ->
+            if(commit.name == commitIterator.name) foundCommit = true
+
+            if (foundCommit) {
+                val res = releaseBranches.find { it.baseCommitInMain?.name == commitIterator.name }
+                if(res != null) return res }
+            }
+
+        if (foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch $branch")
+
+        return null
+    }
+
     public fun getLatestReleaseBranch(): ReleaseBranch? =
         releaseBranches.maxByOrNull { it.version }
 
@@ -167,11 +190,11 @@ public class Releases public constructor(private val git: Git, private val confi
      * Getting the name of the current branch name used in PR/MR or currently checked-out.
      * The algorithm is the following:
      * 1) First try to get a checkout branch.
-     * 2) If HEAD is detouched (no branch is checked-out), then will use env variables set by CI.
+     * 2) If HEAD is detached (no branch is checked-out), then will use env variables set by CI.
      * 3) Try to use VERCRAFT_BRANCH env variable.
      */
     private fun setCurrentBranch(): Branch {
-        // repo.branch == null when the HEAD is detouched
+        // repo.branch == null when the HEAD is detached
         return if (repo.branch == null || Branch(git, config, repo.branch, defaultMainBranch).ref == null) {
             logger.info(WARN_BRANCH_NAME)
 

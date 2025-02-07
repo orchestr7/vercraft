@@ -1,4 +1,4 @@
-package com.akuleshov7.vercraft.tests
+package com.akuleshov7.vercraft.tests.functional
 
 import com.akuleshov7.vercraft.core.CheckoutBranch
 import com.akuleshov7.vercraft.core.Config

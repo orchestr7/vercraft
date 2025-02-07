@@ -16,7 +16,7 @@ public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Bran
      */
     public val gitLog: List<RevCommit> = ref?.let { git.log().add(it.objectId).call().toList() } ?: emptyList()
 
-    public constructor(git: Git, config: Config, name: String, mainBranch: Branch? = null) : this(
+    public constructor(git: Git, config: Config, name: String, defaultMainBranch: Branch? = null) : this(
         git,
         /**
          * It appeared that standard findRef is only checking local branches, so we will try to
@@ -25,13 +25,13 @@ public open class Branch(git: Git, public val ref: Ref?, defaultMainBranch: Bran
         git.repository.findRef("${Constants.R_HEADS}$name")
             ?: git.repository.findRef("${Constants.R_REMOTES}${config.remote}/$name"),
 
-        mainBranch
+        defaultMainBranch
     )
 
     public val baseCommitInMain: RevCommit? = when {
         // we are building Branch class based on default branch (main)
         defaultMainBranch == null -> gitLog.last()
-        // detouched HEAD and this means we can return current commit
+        // detached HEAD and this means we can return current commit
         gitLog.isEmpty() -> null
         else -> this.intersectionCommitWithBranch(defaultMainBranch)
     }
