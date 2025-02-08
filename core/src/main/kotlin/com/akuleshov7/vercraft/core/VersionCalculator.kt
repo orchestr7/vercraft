@@ -59,7 +59,6 @@ public class VersionCalculator(
     private fun calcVersionInDefaultMain(): SemVer {
         val latestRelease = releases.getLatestReleaseForCommit(headCommit, currentCheckoutBranch)
         // if no releases were made so far, then will calculate version starting from the initial commit
-        // TODO: latest release should be calculated relatively to the HEAD commit
         val baseCommit = latestRelease
             ?.intersectionCommitWithBranch(currentCheckoutBranch)
             ?: currentCheckoutBranch.gitLog.last()
@@ -75,7 +74,7 @@ public class VersionCalculator(
                     .incrementPatchVersion(distance)
                     .setPostFix("${config.defaultMainBranch}+$shortedHashCode")
             }
-            ?: run { SemVer(0, 0, distance) }
+            ?: run { SemVer(0, 0, distance).setPostFix("${config.defaultMainBranch}+$shortedHashCode") }
     }
 
     /**

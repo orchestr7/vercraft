@@ -95,7 +95,7 @@ public class Releases public constructor(private val git: Git, private val confi
                 if(res != null) return res }
             }
 
-        if (foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch $branch")
+        if (!foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch $branch")
 
         return null
     }

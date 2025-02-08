@@ -55,7 +55,7 @@ class LatestBranchTest {
             }
             val res = releases.getLatestReleaseForCommit(commit, releases.defaultMainBranch)?.ref?.name
             println(res)
-            assertEquals("refs/remotes/origin/release/1.1.0", res)
+            assertEquals(null, res)
         }
     }
 }
