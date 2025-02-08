@@ -95,7 +95,7 @@ public class Releases public constructor(private val git: Git, private val confi
                 if(res != null) return res }
             }
 
-        if (!foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch $branch")
+        if (!foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch ${branch.ref?.name}")
 
         return null
     }
@@ -116,7 +116,8 @@ public class Releases public constructor(private val git: Git, private val confi
             currentBranch != defaultMainBranch ->  throw IllegalStateException(
                 "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref?.name}], " +
                         "but ${releaseType.name} release should always be done from default [${defaultMainBranch.ref?.name}] " +
-                        "branch. This is required, because during the release VerCraft will create a new branch and tag."
+                        "branch. This is required, because during the release VerCraft will create a " +
+                        "new branch and tag from the default branch."
             )
 
             releaseBranches.map { it.baseCommitInMain }.contains(currentCommit) ->
@@ -137,17 +138,11 @@ public class Releases public constructor(private val git: Git, private val confi
                     if (latestRelease == null) {
                         // if there have been no releases yet, we will simply create a patch tag on main/master
                         git.checkout().setName(config.defaultMainBranch.value).call()
-                        createTag(
-                            VersionCalculator(
-                                git,
-                                config,
-                                this,
-                                defaultMainBranch
-                            ).calc()
-                        )
+                        createTag(version.calc())
                     } else {
                         // otherwise - we will check out release branch and tag latest commit
                         git.checkout().setName(latestRelease.ref!!.name).call()
+                        // here we need to recreate VersionCalculator, because previously it was created for default branch
                         createTag(VersionCalculator(git, config, this, latestRelease).calc())
                     }
 
