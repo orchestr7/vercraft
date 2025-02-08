@@ -31,8 +31,3 @@ public fun makeRelease(gitPath: File, version: SemVer, config: Config): String {
 
     return version.toString()
 }
-
-public fun main() {
-    gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote))
-    makeRelease(File("."), SemVerReleaseType.MINOR, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote))
-}
