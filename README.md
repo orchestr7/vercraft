@@ -24,7 +24,7 @@ pluginManagement {
 
 plugins {
     // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.4.0")
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.5.0")
 }
 
 // (!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`.

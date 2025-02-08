@@ -44,7 +44,7 @@ jobs:
         with:
           gradle-version: wrapper
 
-      - name: Gradle release from tag
+      - name: Gradle release to Sonatype
         run: ./gradlew --console=rich -Prelease -PgprUser=${{ github.actor }} -PgprKey=${{ secrets.GITHUB_TOKEN }} publishToSonatype
 
       - name: Status git after
