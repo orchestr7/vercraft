@@ -1,5 +1,6 @@
 package com.akuleshov7.vercraft.utils
 
+import com.akuleshov7.vercraft.core.Remote
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import com.akuleshov7.vercraft.core.utils.WARN_PREFIX
 import org.gradle.api.DefaultTask
@@ -16,9 +17,9 @@ public abstract class GitUtilsTask : DefaultTask() {
     @Inject
     protected abstract fun getExecOperations(): ExecOperations?
 
-    fun gitPushBranch(remote: String, branch: String) {
+    fun gitPushBranch(remote: Remote, branch: String) {
         runGitCommand(
-            listOf("git", "push", "-u", remote, branch),
+            listOf("git", "push", "-u", remote.value, branch),
             "Unable to push release branch to remote.",
             getExecOperations()!!,
             project,
@@ -26,9 +27,9 @@ public abstract class GitUtilsTask : DefaultTask() {
         )
     }
 
-    fun gitPushTag(remote: String, tag: String) {
+    fun gitPushTag(remote: Remote, tag: String) {
         runGitCommand(
-            listOf("git", "push", remote, "tag", tag),
+            listOf("git", "push", remote.value, "tag", tag),
             "Unable to push release tag to remote.",
             getExecOperations()!!,
             project,

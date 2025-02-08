@@ -1,8 +1,6 @@
 package com.akuleshov7.vercraft
 
-import com.akuleshov7.vercraft.core.Config
-import com.akuleshov7.vercraft.core.DefaultConfig
-import com.akuleshov7.vercraft.core.gitVersion
+import com.akuleshov7.vercraft.core.*
 import com.akuleshov7.vercraft.utils.runGitCommand
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -16,7 +14,8 @@ const val SEM_VER = "semVer"
 const val REMOTE = "remote"
 
 class VercraftPlugin @Inject constructor(
-    private val execOperations: ExecOperations // Injected ExecOperations
+    // Injected ExecOperations
+    private val execOperations: ExecOperations
 ) : Plugin<Project> {
     override fun apply(project: Project) {
         assert(project == project.rootProject) { "Vercraft plugin should be applied to root project" }
@@ -32,15 +31,15 @@ class VercraftPlugin @Inject constructor(
         )
         extension.config.set(
             Config(
-                project.findProperty(DEFAULT_MAIN_BRANCH)?.toString() ?: DefaultConfig.defaultMainBranch,
-                project.findProperty(REMOTE)?.toString() ?: DefaultConfig.remote,
-                project.findProperty(CHECKOUT_BRANCH)?.toString() ?: DefaultConfig.checkoutBranch
+                DefaultMainBranch(project.findProperty(DEFAULT_MAIN_BRANCH)?.toString() ?: DefaultConfig.defaultMainBranch.value),
+                Remote(project.findProperty(REMOTE)?.toString() ?: DefaultConfig.remote.value),
+                project.findProperty(CHECKOUT_BRANCH)?.toString()?.let { CheckoutBranch(it) }
             )
         )
 
         // === fetching project
         runGitCommand(
-            listOf("git", "fetch", extension.config.get().remote, "--prune", "--tags"),
+            listOf("git", "fetch", extension.config.get().remote.value, "--prune", "--tags"),
             "Unable to fetch project from the remote.",
             execOperations,
             project,

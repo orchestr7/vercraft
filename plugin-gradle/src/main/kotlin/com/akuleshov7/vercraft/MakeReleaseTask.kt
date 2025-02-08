@@ -31,13 +31,13 @@ abstract class MakeReleaseTask : GitUtilsTask() {
         val semVerVal = semVer.orNull
 
         val version = if (semVerVal != null) {
-            com.akuleshov7.vercraft.core.createRelease(
+            com.akuleshov7.vercraft.core.makeRelease(
                 project.projectDir,
                 semVerVal,
                 DefaultConfig
             )
         } else {
-            com.akuleshov7.vercraft.core.createRelease(
+            com.akuleshov7.vercraft.core.makeRelease(
                 project.projectDir,
                 releaseType.getOrElse(SemVerReleaseType.MINOR),
                 DefaultConfig
