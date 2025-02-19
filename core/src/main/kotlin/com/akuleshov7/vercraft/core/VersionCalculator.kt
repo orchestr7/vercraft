@@ -34,8 +34,8 @@ public class VersionCalculator(
 
     public fun calc(): SemVer =
         when {
-            currentCheckoutBranch.ref.name
-                .shortName(config.remote) == config.defaultMainBranch -> calcVersionInMain()
+            currentCheckoutBranch.ref!!.name
+                .shortName(config.remote.value) == config.defaultMainBranch.value -> calcVersionInDefaultMain()
             releases.isReleaseBranch(currentCheckoutBranch) -> calcVersionInRelease()
             else -> calcVersionInBranch()
         }
@@ -56,11 +56,10 @@ public class VersionCalculator(
      * "-main" and the first 5 characters of the commit hash. So the result will be as following:
      * aaa -> bbb (release/0.1.0) -> 0.2.0-main+hash -> 0.2.1-main+hash (?)
      */
-    private fun calcVersionInMain(): SemVer {
-        val latestRelease = releases.getLatestReleaseBranch()
+    private fun calcVersionInDefaultMain(): SemVer {
+        val latestRelease = releases.getLatestReleaseForCommit(headCommit, currentCheckoutBranch)
         // if no releases were made so far, then will calculate version starting from the initial commit
-        // TODO: latest release should be calculated relatively to the HEAD commit
-        val baseCommit = latestRelease?.branch
+        val baseCommit = latestRelease
             ?.intersectionCommitWithBranch(currentCheckoutBranch)
             ?: currentCheckoutBranch.gitLog.last()
 
@@ -75,7 +74,7 @@ public class VersionCalculator(
                     .incrementPatchVersion(distance)
                     .setPostFix("${config.defaultMainBranch}+$shortedHashCode")
             }
-            ?: run { SemVer(0, 0, distance) }
+            ?: run { SemVer(0, 0, distance).setPostFix("${config.defaultMainBranch}+$shortedHashCode") }
     }
 
     /**
@@ -104,12 +103,12 @@ public class VersionCalculator(
      * patches or additional fixes after the release of version **0.1.0** (commit **bbb**).
      */
     private fun calcVersionInRelease(): SemVer {
-        val distance = distanceFromMainBranch()
-        return releases.releaseBranches.find { it.branch == currentCheckoutBranch }
+        val distance = distanceFromDefaultMainBranch()
+        return releases.releaseBranches.find { it.ref == currentCheckoutBranch.ref }
             ?.version
             ?.incrementPatchVersion(distance)
             ?: throw IllegalStateException(
-                "Cannot find branch ${currentCheckoutBranch.ref.name} in the list of release branches:" +
+                "Cannot find branch ${currentCheckoutBranch.ref!!.name} in the list of release branches:" +
                         "${releases.releaseBranches}"
             )
     }
@@ -130,12 +129,12 @@ public class VersionCalculator(
      */
     private fun calcVersionInBranch(): SemVer {
         // replace all special symbols except letters and digits from branch name and limit it to 10 symbols
-        val branchName = currentCheckoutBranch.ref.name.substringAfterLast("/")
+        val branchName = currentCheckoutBranch.ref!!.name.substringAfterLast("/")
         val branch = branchName
             .substring(0, min(branchName.length, 10))
             .replace("[^A-Za-z0-9]".toRegex(), "")
 
-        val distance = distanceFromMainBranch()
+        val distance = distanceFromDefaultMainBranch()
 
         RevWalk(repo).use { walk ->
             val commit: RevCommit = walk.parseCommit(headCommit)
@@ -150,22 +149,14 @@ public class VersionCalculator(
         }
     }
 
-    private fun distanceFromMainBranch(): Int {
-        releases.mainBranch.gitLog.forEachIndexed { i, c ->
-            println(i.toString() + " " + c.name + "____" + c.shortMessage)
-        }
-
-        val baseCommit = currentCheckoutBranch.intersectionCommitWithBranch(releases.mainBranch)
+    private fun distanceFromDefaultMainBranch(): Int {
+        val baseCommit = currentCheckoutBranch.baseCommitInMain
             ?: throw IllegalStateException(
                 "Can't find common ancestor commits between ${config.defaultMainBranch} " +
-                        "and ${currentCheckoutBranch.ref.name} branches. Looks like these branches have no relation " +
+                        "and ${currentCheckoutBranch.ref!!.name} branches. Looks like these branches have no relation " +
                         "and that is an inconsistent git state."
             )
 
-        println("BASE IN MAIN:" + baseCommit.name)
-        currentCheckoutBranch.gitLog.forEachIndexed { i, c ->
-            println(i.toString() + " " + c.name + "____" + c.shortMessage)
-        }
         return currentCheckoutBranch.distanceBetweenCommits(baseCommit, headCommit)
     }
 }

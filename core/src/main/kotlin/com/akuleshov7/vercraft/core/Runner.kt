@@ -15,7 +15,7 @@ public fun gitVersion(gitPath: File, config: Config): String {
     }
 }
 
-public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): String {
+public fun makeRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): String {
     Git.open(gitPath).use { git ->
         val version = Releases(git, config).createNewRelease(semVerReleaseType)
         logger.warn(">> VerCrafted new release [$version]")
@@ -23,15 +23,11 @@ public fun createRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, co
     }
 }
 
-public fun createRelease(gitPath: File, version: SemVer, config: Config): String {
+public fun makeRelease(gitPath: File, version: SemVer, config: Config): String {
     Git.open(gitPath).use { git ->
         Releases(git, config).createNewRelease(version)
         logger.warn(">> VerCrafted new release [$version]")
     }
 
     return version.toString()
-}
-
-public fun main() {
-    gitVersion(File("."), Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, "feature/readme"))
 }

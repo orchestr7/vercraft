@@ -24,7 +24,7 @@ pluginManagement {
 
 plugins {
     // when this plugin is applied to parent project, it will automatically calculate and set the version of the project
-    id("com.akuleshov7.vercraft.plugin-gradle") version("0.4.0")
+    id("com.akuleshov7.vercraft.plugin-gradle") version("0.5.0")
 }
 
 // (!) Note: If the plugin runs successfully, you will see a log message like this: `>> VerCrafted: 0.0.1`.
@@ -56,7 +56,7 @@ To create local release tag, local release branch, calculate and return version,
 **(!) Important:** Vercraft uses branches and git history for the calculation of version. 
 So for a proper work, you need to do the following setup:
 
-✅Github: set fetch-depth: 0 in checkout action \
+✅ Github: set fetch-depth: 0 in checkout action \
 ✅ Gitlab: set GIT_DEPTH: 0 in your particular job 
 
 All modern CI platforms check out a specific commit to execute their actions. 
@@ -73,11 +73,9 @@ detects and utilizes:
 
 💡For other CI platforms, please ensure you **manually set** the VERCRAFT_BRANCH environment variable.
 
-
 ## Supported Build Tools
 ✅ **Gradle** \
 🚧 **Maven** (coming soon)
-
 
 ## How it works
 VerCraft automatically calculates the version for your currently checked-out ref (commit or branch). 
@@ -99,7 +97,6 @@ No need for extra tags on every commit or any redundant steps - just clean and e
 ![docs/gitVersion.png](docs/gitVersion.png)
 
 ![docs/makeRelease.png](docs/makeRelease.png)
-
 
 ## Why Choose VerCraft
 There are already several great tools like `gradle-plugin-versionest`, `reckon`, `JGitver`, and `nebula-release-plugin` 
@@ -127,4 +124,3 @@ Run the following commands for local builds or to publish to your local Maven re
 ./gradlew build
 ./gradlew publishToMavenLocal
 ```
-
