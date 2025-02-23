@@ -5,8 +5,8 @@ import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.Releases
 import com.akuleshov7.vercraft.utils.checkoutRef
+import com.akuleshov7.vercraft.utils.vercraftTest
 import org.eclipse.jgit.api.Git
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -19,7 +19,7 @@ const val LAST_COMMIT_TEST_BRANCH = "70982520bb947ab4331d3bf25dd73074cad7e8a5"
 class GitTestRandomBranch {
     @Test
     fun `initial commit test branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, INITIAL_COMMIT_TEST_BRANCH)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
@@ -30,7 +30,7 @@ class GitTestRandomBranch {
 
     @Test
     fun `first commit test branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, FIRST_COMMIT_TEST_BRANCH)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
@@ -41,7 +41,7 @@ class GitTestRandomBranch {
 
     @Test
     fun `second commit test branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, SECOND_COMMIT_TEST_BRANCH)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
@@ -52,7 +52,7 @@ class GitTestRandomBranch {
 
     @Test
     fun `last commit test branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, LAST_COMMIT_TEST_BRANCH)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("feature/test")))
             val resultedVer = releases.version.calc()
@@ -63,7 +63,7 @@ class GitTestRandomBranch {
 
     @Test
     fun `just test branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             if (git.repository.findRef("feature/test") == null) {
                 git.checkout()
                     .setCreateBranch(true)
