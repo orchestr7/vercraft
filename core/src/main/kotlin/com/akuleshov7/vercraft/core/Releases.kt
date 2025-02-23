@@ -213,12 +213,13 @@ public class Releases public constructor(private val git: Git, private val confi
     }
 
     private fun createBranch(newVersion: SemVer) {
+        // new branch is always created with "x" as patch version
         git.branchCreate()
-            .setName("release/$newVersion")
+            .setName("release/${newVersion.semVerForNewBranch()}")
             .call()
             .also { releaseBranches.add(ReleaseBranch(git, config, it, defaultMainBranch)) }
 
-        logger.warn("+ Created a branch [release/$newVersion]")
+        logger.warn("+ Created a branch [release/${newVersion.semVerForNewBranch()}]")
     }
 
     /**
