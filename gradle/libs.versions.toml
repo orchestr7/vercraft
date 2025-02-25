@@ -2,7 +2,7 @@
 kotlin = "2.1.10"
 kotlin-wrappers = "1.0.0-pre.754"
 jgit = "7.1.0.202411261347-r"
-slf4j = "2.0.11"
+slf4j = "2.0.17"
 log4j = "2.20.0"
 
 [plugins]
