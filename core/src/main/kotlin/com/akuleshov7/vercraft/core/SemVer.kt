@@ -44,7 +44,10 @@ public class SemVer : Comparable<SemVer> {
         require(ver != null) {
             throw IllegalArgumentException("Can't calculate SemVer version, as received 'null' input")
         }
-        val parts = ver.removeReleasePrefix().split(".").map { it.toInt() }
+        val parts = ver.removeReleasePrefix().split(".").map {
+            // support for both 0.1.x and 0.1.0 versions
+            if (it == "x") 0 else it.toInt()
+        }
         require(parts.size == 3) {
             throw IllegalArgumentException("SemVer version [$this] must be in the following format: 'major.minor.patch'")
         }
@@ -96,6 +99,8 @@ public class SemVer : Comparable<SemVer> {
                 "$major$minor${this.patch}" +
                 (if (postfix != "") "-$postfix" else "")
     }
+
+    public fun semVerForNewBranch(): String = "$major.$minor.${if (patch == 0) "x" else patch}"
 
     public fun justSemVer(): String = "$major.$minor.$patch"
 

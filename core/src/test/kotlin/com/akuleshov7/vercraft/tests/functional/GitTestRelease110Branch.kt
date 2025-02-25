@@ -5,8 +5,8 @@ import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.Releases
 import com.akuleshov7.vercraft.utils.checkoutRef
+import com.akuleshov7.vercraft.utils.vercraftTest
 import org.eclipse.jgit.api.Git
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -17,7 +17,7 @@ const val SECOND_COMMIT_IN_RELEASE_1_1_0 = "1f22b4ced648c6b8b5f36dc2e900ffc7b39a
 class GitTestRelease110Branch {
     @Test
     fun `release 1 1 0 commit but on release branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, RELEASE_1_1_0_COMMIT_MAIN)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
@@ -28,7 +28,7 @@ class GitTestRelease110Branch {
 
     @Test
     fun `first commit in release 1 1 0, no local branch`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, FIRST_COMMIT_IN_RELEASE_1_1_0)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
@@ -39,7 +39,7 @@ class GitTestRelease110Branch {
 
     @Test
     fun `first commit in release 1 1 0 with checked-out local`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             if (git.repository.findRef("release/1.1.0") == null) {
                 git.checkout()
                     .setCreateBranch(true)
@@ -71,7 +71,7 @@ class GitTestRelease110Branch {
 
     @Test
     fun `second commit in release 1 1 0`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             checkoutRef(git, SECOND_COMMIT_IN_RELEASE_1_1_0)
             val releases = Releases(git, Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("release/1.1.0")))
             val resultedVer = releases.version.calc()
@@ -82,7 +82,7 @@ class GitTestRelease110Branch {
 
     @Test
     fun `release branch checkout local`() {
-        Git.open(File("src/test/resources/vercraft-test")).use { git ->
+        Git.open(vercraftTest).use { git ->
             if (git.repository.findRef("release/1.1.0") == null) {
                 git.checkout()
                     .setCreateBranch(true)
