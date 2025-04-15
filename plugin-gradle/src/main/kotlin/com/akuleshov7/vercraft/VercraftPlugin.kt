@@ -29,17 +29,17 @@ class VercraftPlugin @Inject constructor(
         extension.setSemVerFromProps(
             project.findProperty(SEM_VER)
         )
-        extension.config.set(
-            Config(
-                DefaultMainBranch(project.findProperty(DEFAULT_MAIN_BRANCH)?.toString() ?: DefaultConfig.defaultMainBranch.value),
-                Remote(project.findProperty(REMOTE)?.toString() ?: DefaultConfig.remote.value),
-                project.findProperty(CHECKOUT_BRANCH)?.toString()?.let { CheckoutBranch(it) }
-            )
+
+        val config = Config(
+            DefaultMainBranch(project.findProperty(DEFAULT_MAIN_BRANCH)?.toString() ?: DefaultConfig.defaultMainBranch.value),
+            Remote(project.findProperty(REMOTE)?.toString() ?: DefaultConfig.remote.value),
+            project.findProperty(CHECKOUT_BRANCH)?.toString()?.let { CheckoutBranch(it) }
         )
+        extension.config.set(config)
 
         // === fetching project
         runGitCommand(
-            listOf("git", "fetch", extension.config.get().remote.value, "--prune", "--tags"),
+            listOf("git", "fetch", config.remote.value, "--prune", "--tags"),
             "Unable to fetch project from the remote.",
             execOperations,
             project,
@@ -48,7 +48,7 @@ class VercraftPlugin @Inject constructor(
         )
 
         // TODO: think also about changing the version in settings.gradle
-        val ver = gitVersion(project.projectDir, DefaultConfig)
+        val ver = gitVersion(project.projectDir, config)
         project.allprojects.forEach {
             it.version = ver
         }
