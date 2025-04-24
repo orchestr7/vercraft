@@ -2,12 +2,9 @@ package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.SemVerReleaseType.*
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
-import org.apache.logging.log4j.LogManager
 
 internal const val NO_MAJOR = -1
 internal const val NO_MINOR = -1
-
-private val logger = LogManager.getLogger()
 
 public enum class SemVerReleaseType {
     MAJOR,
@@ -20,7 +17,7 @@ public enum class SemVerReleaseType {
             runCatching { SemVerReleaseType.valueOf(value.uppercase()) }
                 .getOrNull()
                 ?: run {
-                    logger.error(
+                    println(
                         "$ERROR_PREFIX value [$value] is not allowed as type of SemVer release. " +
                                 "Eligible values are: MAJOR, MINOR, PATCH"
                     )

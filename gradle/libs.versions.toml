@@ -2,8 +2,6 @@
 kotlin = "2.1.10"
 kotlin-wrappers = "1.0.0-pre.754"
 jgit = "7.1.0.202411261347-r"
-slf4j = "2.0.11"
-log4j = "2.20.0"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -11,7 +9,3 @@ kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization"
 
 [libraries]
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit"}
-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
-log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }

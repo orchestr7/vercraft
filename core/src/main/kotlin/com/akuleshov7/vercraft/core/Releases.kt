@@ -2,7 +2,6 @@ package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import com.akuleshov7.vercraft.core.utils.WARN_PREFIX
-import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE
@@ -13,7 +12,7 @@ import org.eclipse.jgit.revwalk.RevWalk
 
 internal const val RELEASE_PREFIX = "release"
 
-internal const val WARN_BRANCH_NAME = "$WARN_PREFIX your current HEAD is detached (no branch is checked out). " +
+internal const val WARN_BRANCH_NAME = "$WARN_PREFIX FYI: your current HEAD is detached (no branch is checked out). " +
         "Usually this happens on CI platforms, which check out particular commit. " +
         "Vercraft will try to resolve branch name using known CI ENV variables: " +
         "$GITLAB_BRANCH_REF, $GITHUB_HEAD_REF, $BITBUCKET_BRANCH. " +
@@ -53,8 +52,6 @@ public class ReleaseBranch(
  * - create new release branches (in case when needed)
  */
 public class Releases public constructor(private val git: Git, private val config: Config) {
-    private val logger = LogManager.getLogger(Releases::class.java)
-
     public val repo: Repository = git.repository
 
     public val defaultMainBranch: Branch = Branch(git, config, config.defaultMainBranch.value).also {
@@ -129,7 +126,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
             else -> {
                 if (releaseType == SemVerReleaseType.PATCH) {
-                    logger.warn(
+                    println(
                         "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
                                 "will be created, as patch releases should be made only in existing release branch. " +
                                 if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
@@ -158,7 +155,7 @@ public class Releases public constructor(private val git: Git, private val confi
 
     public fun createNewRelease(version: SemVer): String {
         if (releaseBranches.map { it.version }.contains(version)) {
-            logger.warn(
+            println(
                 "$ERROR_PREFIX The branch with the version [$version] which was selected for " +
                         "the new release already exists. No new branches will be created, please select the proper version."
             )
@@ -175,7 +172,7 @@ public class Releases public constructor(private val git: Git, private val confi
             .setMessage("Release ${newVersion.justSemVer()}")
             .call()
 
-        logger.warn(
+        println(
             "+ Created a tag v${newVersion.justSemVer()} " +
                     "[Release ${newVersion.justSemVer()}], original version is $newVersion"
         )
@@ -191,7 +188,7 @@ public class Releases public constructor(private val git: Git, private val confi
     private fun setCurrentBranch(): Branch {
         // repo.branch == null when the HEAD is detached
         return if (repo.branch == null || Branch(git, config, repo.branch, defaultMainBranch).ref == null) {
-            logger.info(WARN_BRANCH_NAME)
+            println(WARN_BRANCH_NAME)
 
             val branchName = config.checkoutBranch
                 ?.value
@@ -200,7 +197,7 @@ public class Releases public constructor(private val git: Git, private val confi
                 ?: System.getenv(BITBUCKET_BRANCH)
                 ?: System.getenv(VERCRAFT_BRANCH)
                 ?: run {
-                    logger.warn(ERROR_MISSING_BRANCH_NAME)
+                    println(ERROR_MISSING_BRANCH_NAME)
                     throw NullPointerException(ERROR_BRANCH_DETECTION)
                 }
 
@@ -219,7 +216,7 @@ public class Releases public constructor(private val git: Git, private val confi
             .call()
             .also { releaseBranches.add(ReleaseBranch(git, config, it, defaultMainBranch)) }
 
-        logger.warn("+ Created a branch [release/${newVersion.semVerForNewBranch()}]")
+        println("+ Created a branch [release/${newVersion.semVerForNewBranch()}]")
     }
 
     /**
@@ -239,7 +236,7 @@ public class Releases public constructor(private val git: Git, private val confi
             val value = allReleaseBranches[it]
             if (value!!.size > 1) {
                 if (value[0].gitLog != value[1].gitLog) {
-                    logger.warn(
+                    println(
                         "$ERROR_PREFIX Remote and local branches '$it' differ. " +
                                 "Do you have any non-pushed commits in your local branch? Will use " +
                                 "remote branch to calculate versions."
