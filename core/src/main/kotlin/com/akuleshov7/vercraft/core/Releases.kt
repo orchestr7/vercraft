@@ -2,7 +2,6 @@ package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
 import com.akuleshov7.vercraft.core.utils.WARN_PREFIX
-import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.ListBranchCommand.ListMode.REMOTE

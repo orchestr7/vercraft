@@ -8,4 +8,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
-jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit"}å
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit"}

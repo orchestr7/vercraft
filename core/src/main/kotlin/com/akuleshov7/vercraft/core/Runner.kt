@@ -1,6 +1,5 @@
 package com.akuleshov7.vercraft.core
 
-import org.apache.logging.log4j.LogManager
 import org.eclipse.jgit.api.Git
 import java.io.File
 

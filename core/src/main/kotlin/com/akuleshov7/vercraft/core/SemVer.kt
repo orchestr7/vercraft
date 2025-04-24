@@ -2,7 +2,6 @@ package com.akuleshov7.vercraft.core
 
 import com.akuleshov7.vercraft.core.SemVerReleaseType.*
 import com.akuleshov7.vercraft.core.utils.ERROR_PREFIX
-import org.apache.logging.log4j.LogManager
 
 internal const val NO_MAJOR = -1
 internal const val NO_MINOR = -1
