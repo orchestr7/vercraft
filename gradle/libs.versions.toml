@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.2.0"
 kotlin-wrappers = "1.0.0-pre.754"
-jgit = "7.1.0.202411261347-r"
+jgit = "7.5.0.202512021534-r"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
