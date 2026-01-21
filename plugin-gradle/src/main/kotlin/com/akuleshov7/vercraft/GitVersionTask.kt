@@ -1,7 +1,6 @@
 package com.akuleshov7.vercraft
 
 import com.akuleshov7.vercraft.core.Config
-import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.gitVersion
 import com.akuleshov7.vercraft.utils.GitUtilsTask
 import org.gradle.api.provider.Property
@@ -24,7 +23,7 @@ abstract class GitVersionTask : GitUtilsTask() {
     @TaskAction
     fun gitVersion() {
         project.beforeEvaluate {
-            version = gitVersion(project.projectDir, DefaultConfig)
+            version = gitVersion(project.projectDir, config.get())
             project.allprojects.forEach {
                 it.version = version
             }
