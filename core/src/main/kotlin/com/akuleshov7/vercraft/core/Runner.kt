@@ -12,7 +12,7 @@ public fun gitVersion(gitPath: File, config: Config): String {
     }
 }
 
-public fun makeRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): String {
+public fun makeRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, config: Config): SemVer {
     Git.open(gitPath).use { git ->
         val version = Releases(git, config).createNewRelease(semVerReleaseType)
         println(">> VerCrafted new release [$version]")
@@ -20,11 +20,11 @@ public fun makeRelease(gitPath: File, semVerReleaseType: SemVerReleaseType, conf
     }
 }
 
-public fun makeRelease(gitPath: File, version: SemVer, config: Config): String {
+public fun makeRelease(gitPath: File, version: SemVer, config: Config): SemVer {
     Git.open(gitPath).use { git ->
         Releases(git, config).createNewRelease(version)
         println(">> VerCrafted new release [$version]")
     }
 
-    return version.toString()
+    return version
 }
