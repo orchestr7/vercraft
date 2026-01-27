@@ -4,11 +4,11 @@ import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
 import com.akuleshov7.vercraft.core.SemVer
 import com.akuleshov7.vercraft.core.SemVerReleaseType
+import com.akuleshov7.vercraft.utils.GitUtilsTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.TaskAction
-import com.akuleshov7.vercraft.utils.GitUtilsTask
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
 
 
 /**
@@ -34,18 +34,18 @@ abstract class MakeReleaseTask : GitUtilsTask() {
             com.akuleshov7.vercraft.core.makeRelease(
                 project.projectDir,
                 semVerVal,
-                DefaultConfig
+                config.getOrElse(DefaultConfig),
             )
         } else {
             com.akuleshov7.vercraft.core.makeRelease(
                 project.projectDir,
                 releaseType.getOrElse(SemVerReleaseType.MINOR),
-                DefaultConfig
+                config.getOrElse(DefaultConfig),
             )
         }
 
         // Push release branch
-        gitPushBranch(config.get().remote, "release/$version")
+        gitPushBranch(config.get().remote, "release/${version.semVerForBranch()}")
 
         // Push release tag
         gitPushTag(config.get().remote, "v$version")

@@ -97,7 +97,7 @@ public class SemVer : Comparable<SemVer> {
                 (if (postfix != "") "-$postfix" else "")
     }
 
-    public fun semVerForNewBranch(): String = "$major.$minor.${if (patch == 0) "x" else patch}"
+    public fun semVerForBranch(): String = "$major.$minor.x"
 
     public fun justSemVer(): String = "$major.$minor.$patch"
 
@@ -128,6 +128,6 @@ public class SemVer : Comparable<SemVer> {
 }
 
 public fun String.isValidSemVerFormat(): Boolean {
-    val semVerRegex = Regex("""^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$""")
+    val semVerRegex = Regex("""^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*|x)$""")
     return semVerRegex.matches(this)
 }

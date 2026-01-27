@@ -85,12 +85,13 @@ public class Releases public constructor(private val git: Git, private val confi
     public fun getLatestReleaseForCommit(commit: RevCommit, branch: Branch): ReleaseBranch? {
         var foundCommit = false
         branch.gitLog.forEach { commitIterator ->
-            if(commit.name == commitIterator.name) foundCommit = true
+            if (commit.name == commitIterator.name) foundCommit = true
 
             if (foundCommit) {
                 val res = releaseBranches.find { it.baseCommitInMain?.name == commitIterator.name }
-                if(res != null) return res }
+                if (res != null) return res
             }
+        }
 
         if (!foundCommit) throw IllegalArgumentException("Commit $commit cannot be found in branch ${branch.ref?.name}")
 
@@ -101,7 +102,7 @@ public class Releases public constructor(private val git: Git, private val confi
         releaseBranches.maxByOrNull { it.version }
 
     // TODO: add tests to cover makeRelease task
-    public fun createNewRelease(releaseType: SemVerReleaseType): String {
+    public fun createNewRelease(releaseType: SemVerReleaseType): SemVer {
         val latestRelease = getLatestReleaseBranch()
 
         val newVersion = latestRelease
@@ -110,13 +111,6 @@ public class Releases public constructor(private val git: Git, private val confi
             ?: version.calc().nextVersion(releaseType)
 
         when {
-            currentBranch != defaultMainBranch ->  throw IllegalStateException(
-                "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref?.name}], " +
-                        "but ${releaseType.name} release should always be done from default [${defaultMainBranch.ref?.name}] " +
-                        "branch. This is required, because during the release VerCraft will create a " +
-                        "new branch and tag from the default branch."
-            )
-
             releaseBranches.map { it.baseCommitInMain }.contains(currentCommit) ->
                 throw IllegalStateException(
                     "$ERROR_PREFIX Current checked-out commit already is associated with release branch " +
@@ -124,36 +118,42 @@ public class Releases public constructor(private val git: Git, private val confi
                             "Making a new release from this commit is pointless, please delete or use existing branch."
                 )
 
-            else -> {
-                if (releaseType == SemVerReleaseType.PATCH) {
-                    println(
-                        "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
-                                "will be created, as patch releases should be made only in existing release branch. " +
-                                if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
-                    )
+            releaseType == SemVerReleaseType.PATCH -> {
+                println(
+                    "$WARN_PREFIX ReleaseType PATCH has been selected, so no new release branches " +
+                            "will be created, as patch releases should be made only in existing release branch. " +
+                            if (latestRelease?.version != null) "Latest release: $latestRelease." else ""
+                )
 
-                    if (latestRelease == null) {
-                        // if there have been no releases yet, we will simply create a patch tag on main/master
-                        git.checkout().setName(config.defaultMainBranch.value).call()
-                        createTag(version.calc())
-                    } else {
-                        // otherwise - we will check out release branch and tag latest commit
-                        git.checkout().setName(latestRelease.ref!!.name).call()
-                        // here we need to recreate VersionCalculator, because previously it was created for default branch
-                        createTag(VersionCalculator(git, config, this, latestRelease).calc())
-                    }
-
+                if (latestRelease == null) {
+                    // if there have been no releases yet, we will simply create a patch tag on main/master
+                    git.checkout().setName(config.defaultMainBranch.value).call()
+                    createTag(version.calc())
                 } else {
-                    createBranch(newVersion)
-                    createTag(newVersion)
+                    // otherwise - we will check out release branch and tag latest commit
+                    git.checkout().setName(latestRelease.ref!!.name).call()
+                    // here we need to recreate VersionCalculator, because previously it was created for default branch
+                    createTag(VersionCalculator(git, config, this, latestRelease).calc())
                 }
+            }
+
+            currentBranch != defaultMainBranch -> throw IllegalStateException(
+                "$ERROR_PREFIX Branch which is currently checked out is [${currentBranch.ref?.name}], " +
+                        "but ${releaseType.name} release should always be done from default [${defaultMainBranch.ref?.name}] " +
+                        "branch. This is required, because during the release VerCraft will create a " +
+                        "new branch and tag from the default branch."
+            )
+
+            else -> {
+                createBranch(newVersion)
+                createTag(newVersion)
             }
         }
 
-        return "$newVersion"
+        return newVersion
     }
 
-    public fun createNewRelease(version: SemVer): String {
+    public fun createNewRelease(version: SemVer): SemVer {
         if (releaseBranches.map { it.version }.contains(version)) {
             println(
                 "$ERROR_PREFIX The branch with the version [$version] which was selected for " +
@@ -163,7 +163,7 @@ public class Releases public constructor(private val git: Git, private val confi
             createBranch(version)
             createTag(version)
         }
-        return version.toString()
+        return version
     }
 
     private fun createTag(newVersion: SemVer) {
@@ -212,11 +212,11 @@ public class Releases public constructor(private val git: Git, private val confi
     private fun createBranch(newVersion: SemVer) {
         // new branch is always created with "x" as patch version
         git.branchCreate()
-            .setName("release/${newVersion.semVerForNewBranch()}")
+            .setName("release/${newVersion.semVerForBranch()}")
             .call()
             .also { releaseBranches.add(ReleaseBranch(git, config, it, defaultMainBranch)) }
 
-        println("+ Created a branch [release/${newVersion.semVerForNewBranch()}]")
+        println("+ Created a branch [release/${newVersion.semVerForBranch()}]")
     }
 
     /**
