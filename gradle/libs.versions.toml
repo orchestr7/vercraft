@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 kotlin-wrappers = "1.0.0-pre.754"
 jgit = "7.5.0.202512021534-r"
 
