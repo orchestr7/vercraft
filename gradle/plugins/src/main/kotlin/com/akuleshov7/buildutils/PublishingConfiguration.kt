@@ -125,6 +125,7 @@ private fun Project.configureNexusPublishing() {
     apply<NexusPublishPlugin>()
 
     configure<NexusPublishExtension> {
+        // packageGroup.set("com.akuleshov7.vercraft")
         repositories {
             sonatype {
                 nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
