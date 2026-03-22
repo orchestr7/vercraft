@@ -136,3 +136,11 @@ Run the following commands for local builds or to publish to your local Maven re
 ./gradlew build
 ./gradlew publishToMavenLocal
 ```
+
+## Tests
+To test a project we have functional tests. To prepare them -- use:
+
+```bash
+git submodule init
+git submodule update
+```
