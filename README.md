@@ -10,7 +10,7 @@ creating a new release branch, and tagging the commit with the generated version
 We will be glad if you will test `VerCraft` or contribute to this project.
 In case you don't have much time for this - at least spend 5 seconds to give us a star to attract other contributors! 
 **Thanks!** :partying_face: Special thanks to those awesome developers who has given great suggestions for this project: 
-[@nulls](https://github.com/nulls), [@semyon-zvyagin](https://github.com/semyon-zvyagin)
+[@nulls](https://github.com/nulls), [@semyon-zvyagin](https://github.com/semyon-zvyagin), [denis-markushin](https://github.com/denis-markushin), [nutrolshok](https://github.com/nutrolshok)
 
 ## Quick start
 No boring configuration, add the following plugin to your **parent** build.gradle(kts):
@@ -72,6 +72,18 @@ detects and utilizes:
 ✅ Bitbucket: BITBUCKET_BRANCH
 
 💡For other CI platforms, please ensure you **manually set** the VERCRAFT_BRANCH environment variable.
+
+## GitHub Automation:
+
+For the full automation, trigger your release scripts on a branch updates:
+```
+name: Create release to Maven Central
+
+on:
+  push:
+    branches:
+      - 'release/**'
+```
 
 ## Supported Build Tools
 ✅ **Gradle** \
