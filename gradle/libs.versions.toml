@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.3.10"
+kotlin = "2.0.21"
 kotlin-wrappers = "1.0.0-pre.754"
 jgit = "7.5.0.202512021534-r"
 
@@ -8,4 +8,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [libraries]
-jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit"}
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
