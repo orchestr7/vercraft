@@ -8,112 +8,85 @@ import com.akuleshov7.vercraft.core.makeRelease
 import com.akuleshov7.vercraft.utils.checkoutRef
 import com.akuleshov7.vercraft.utils.vercraftTest
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.api.ResetCommand.ResetType
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+private const val SUBMODULE_BASE_HEAD = "9e2e23d82db76a5b6f1aee8a2bb8ffaf485ee9a0"
+
 class GitMakeNewRelease {
+    private val config = Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main"))
 
     @Test
     fun `make new release`() {
-        deleteBranchAndTagIfExist("refs/heads/release/0.2.x", "v0.2.0")
-
         Git.open(vercraftTest).use { git ->
             checkoutRef(git, DETACHED_COMMIT_BETWEEN_RELEASES)
         }
 
-        makeRelease(
-            vercraftTest,
-            SemVerReleaseType.MINOR,
-            Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main"))
-        )
+        val version = makeRelease(vercraftTest, SemVerReleaseType.MINOR, config)
+        val shortBranch = "release/${version.semVerForBranch()}"
+        val tagName = "v${version.justSemVer()}"
 
-        Git.open(vercraftTest).use { git ->
-            assertNotNull(git.branchList().call().map { it.name }.find { it == "refs/heads/release/0.2.x" })
+        try {
+            Git.open(vercraftTest).use { git ->
+                assertNotNull(
+                    git.branchList().call().find { it.name == "refs/heads/$shortBranch" },
+                    "Release branch $shortBranch should be created for MINOR release"
+                )
+            }
+        } finally {
+            deleteBranchAndTagIfExist(shortBranch, tagName)
+            Git.open(vercraftTest).use { git -> checkoutRef(git, SUBMODULE_BASE_HEAD) }
         }
-
-        deleteBranchAndTag("refs/heads/release/0.2.x", "v0.2.0")
     }
 
     @Test
     fun `patch release should not create a new branch`() {
-        Git.open(vercraftTest).use { git ->
-            checkoutRef(git, DETACHED_COMMIT_BETWEEN_RELEASES)
-        }
+        Git.open(vercraftTest).use { git -> checkoutRef(git, DETACHED_COMMIT_BETWEEN_RELEASES) }
+        val minorVersion = makeRelease(vercraftTest, SemVerReleaseType.MINOR, config)
+        val releaseBranch = "release/${minorVersion.semVerForBranch()}"
+        val minorTag = "v${minorVersion.justSemVer()}"
 
-        Git.open(vercraftTest).use { git ->
-            git.checkout().setName("release/0.1.x").call()
+        val branchesBefore = Git.open(vercraftTest).use { git ->
+            git.checkout().setName(releaseBranch).call()
             File(vercraftTest, "patch-fix.txt").writeText("bugfix")
             git.add().addFilepattern("patch-fix.txt").call()
             git.commit().setMessage("patch fix commit").call()
-        }
-
-        Git.open(vercraftTest).use { git ->
-            checkoutRef(git, DETACHED_COMMIT_BETWEEN_RELEASES)
-        }
-
-        val branchesBefore = Git.open(vercraftTest).use { git ->
+            checkoutRef(git, DETACHED_COMMIT_RIGHT_AFTER_RELEASE)
             git.branchList().call().map { it.name }.filter { it.startsWith("refs/heads/") }.toSet()
         }
 
+        var patchTag: String? = null
         try {
-            val patchVersion = makeRelease(
-                vercraftTest,
-                SemVerReleaseType.PATCH,
-                Config(DefaultConfig.defaultMainBranch, DefaultConfig.remote, CheckoutBranch("main"))
-            )
+            val patchVersion = makeRelease(vercraftTest, SemVerReleaseType.PATCH, config)
+            patchTag = "v${patchVersion.justSemVer()}"
 
             Git.open(vercraftTest).use { git ->
-                val branchesAfter =
-                    git.branchList().call().map { it.name }.filter { it.startsWith("refs/heads/") }.toSet()
+                val branchesAfter = git.branchList().call().map { it.name }
+                    .filter { it.startsWith("refs/heads/") }.toSet()
                 assertEquals(branchesBefore, branchesAfter, "PATCH release should not create any new branches")
-
                 assertNotNull(
-                    git.tagList().call().find { it.name == "refs/tags/v${patchVersion.justSemVer()}" },
-                    "Tag v${patchVersion.justSemVer()} should be created for PATCH release"
+                    git.tagList().call().find { it.name == "refs/tags/$patchTag" },
+                    "Tag $patchTag should be created for PATCH release"
                 )
             }
-
-            deleteTag("v${patchVersion.justSemVer()}")
         } finally {
-            Git.open(vercraftTest).use { git ->
-                git.checkout().setName("release/0.1.x").call()
-                git.reset().setMode(ResetType.HARD).setRef("HEAD~1").call()
-                File(vercraftTest, "patch-fix.txt").delete()
-            }
+            Git.open(vercraftTest).use { git -> checkoutRef(git, SUBMODULE_BASE_HEAD) }
+            patchTag?.let { deleteBranchAndTagIfExist(null, it) }
+            deleteBranchAndTagIfExist(releaseBranch, minorTag)
+            File(vercraftTest, "patch-fix.txt").delete()
         }
     }
 
-    fun deleteBranchAndTag(branch: String, tag: String) {
+    private fun deleteBranchAndTagIfExist(branch: String?, tag: String) {
         Git.open(vercraftTest).use { git ->
-            git.branchDelete()
-                .setBranchNames(branch)
-                .setForce(true)
-                .call()
-
-            git.tagDelete()
-                .setTags(tag)
-                .call()
-        }
-    }
-
-    private fun deleteBranchAndTagIfExist(branch: String, tag: String) {
-        Git.open(vercraftTest).use { git ->
-            try {
-                git.branchDelete().setBranchNames(branch).setForce(true).call()
-            } catch (_: Exception) {
+            if (branch != null) {
+                try {
+                    git.branchDelete().setBranchNames(branch).setForce(true).call()
+                } catch (_: Exception) {
+                }
             }
-            try {
-                git.tagDelete().setTags(tag).call()
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    private fun deleteTag(tag: String) {
-        Git.open(vercraftTest).use { git ->
             try {
                 git.tagDelete().setTags(tag).call()
             } catch (_: Exception) {
