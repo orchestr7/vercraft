@@ -20,7 +20,7 @@ public abstract class GitUtilsTask : DefaultTask() {
     fun gitPushBranch(remote: Remote, branch: String) {
         runGitCommand(
             listOf("git", "push", "-u", remote.value, branch),
-            "Unable to push release branch to remote.",
+            "Unable to push release branch to remote. Cmd: [git push -u ${remote.value} $branch]",
             getExecOperations()!!,
             project,
             logger
@@ -30,7 +30,7 @@ public abstract class GitUtilsTask : DefaultTask() {
     fun gitPushTag(remote: Remote, tag: String) {
         runGitCommand(
             listOf("git", "push", remote.value, "tag", tag),
-            "Unable to push release tag to remote.",
+            "Unable to push release tag to remote. Cmd: [git push ${remote.value} tag $tag]",
             getExecOperations()!!,
             project,
             logger
