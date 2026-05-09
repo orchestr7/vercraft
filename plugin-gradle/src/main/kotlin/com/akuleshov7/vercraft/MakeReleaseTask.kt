@@ -44,8 +44,10 @@ abstract class MakeReleaseTask : GitUtilsTask() {
             )
         }
 
-        // Push release branch
-        gitPushBranch(config.get().remote, "release/${version.semVerForBranch()}")
+        // Push release branch (only for MAJOR/MINOR — PATCH reuses an existing branch)
+        if (releaseType.getOrElse(SemVerReleaseType.MINOR) != SemVerReleaseType.PATCH) {
+            gitPushBranch(config.get().remote, "release/${version.semVerForBranch()}")
+        }
 
         // Push release tag
         gitPushTag(config.get().remote, "v$version")
