@@ -3,12 +3,17 @@ package com.akuleshov7.vercraft.tests.functional
 import com.akuleshov7.vercraft.core.CheckoutBranch
 import com.akuleshov7.vercraft.core.Config
 import com.akuleshov7.vercraft.core.DefaultConfig
+import com.akuleshov7.vercraft.core.DefaultMainBranch
+import com.akuleshov7.vercraft.core.Remote
 import com.akuleshov7.vercraft.core.SemVerReleaseType
 import com.akuleshov7.vercraft.core.makeRelease
 import com.akuleshov7.vercraft.utils.checkoutRef
 import com.akuleshov7.vercraft.utils.vercraftTest
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Repository
 import java.io.File
+import java.util.UUID
+import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -77,6 +82,51 @@ class GitMakeNewRelease {
             deleteBranchAndTagIfExist(releaseBranch, minorTag)
             File(vercraftTest, "patch-fix.txt").delete()
         }
+    }
+
+    @Test
+    fun `patch release after a previous patch returns the version of the tag it creates`() {
+        val version = makeRelease(releaseLineWithPatch(), SemVerReleaseType.PATCH, mainConfig())
+        assertEquals("2.9.2", version.toString(), "PATCH release returned a version other than the tag it created")
+    }
+
+    @Test
+    fun `patch release without release branches returns the name of the tag it creates`() {
+        val repo = mainWithoutReleases()
+        val version = makeRelease(repo, SemVerReleaseType.PATCH, mainConfig())
+        val tags = Git.open(repo).use { git -> git.tagList().call().map { Repository.shortenRefName(it.name) } }
+        assertEquals(tags, listOf("v$version"), "PATCH release returned a version that does not name the created tag")
+    }
+
+    private fun mainConfig() = Config(DefaultMainBranch("main"), Remote("origin"), CheckoutBranch("main"))
+
+    private fun mainWithoutReleases(): File {
+        val dir = createTempDirectory("vercraft-main").toFile()
+        Git.init().setDirectory(dir).setInitialBranch("main").call().use { git -> repeat(3) { commit(git) } }
+        return dir
+    }
+
+    private fun releaseLineWithPatch(): File {
+        val dir = createTempDirectory("vercraft-release-line").toFile()
+        Git.init().setDirectory(dir).setInitialBranch("main").call().use { git ->
+            commit(git)
+            git.branchCreate().setName("release/2.9.x").call()
+            git.tag().setName("v2.9.0").call()
+            commit(git)
+            git.checkout().setName("release/2.9.x").call()
+            commit(git)
+            git.tag().setName("v2.9.1").call()
+            commit(git)
+            git.checkout().setName("main").call()
+        }
+        return dir
+    }
+
+    private fun commit(git: Git) {
+        val name = "${UUID.randomUUID()}.txt"
+        File(git.repository.workTree, name).writeText(UUID.randomUUID().toString())
+        git.add().addFilepattern(name).call()
+        git.commit().setMessage(name).call()
     }
 
     private fun deleteBranchAndTagIfExist(branch: String?, tag: String) {
