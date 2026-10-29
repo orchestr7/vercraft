@@ -110,7 +110,7 @@ public class Releases public constructor(private val git: Git, private val confi
             ?.nextVersion(releaseType)
             ?: version.calc().nextVersion(releaseType)
 
-        when {
+        return when {
             releaseBranches.map { it.baseCommitInMain }.contains(currentCommit) ->
                 throw IllegalStateException(
                     "$ERROR_PREFIX Current checked-out commit already is associated with release branch " +
@@ -149,8 +149,6 @@ public class Releases public constructor(private val git: Git, private val confi
                 createTag(newVersion)
             }
         }
-
-        return newVersion
     }
 
     public fun createNewRelease(version: SemVer): SemVer {
@@ -166,7 +164,7 @@ public class Releases public constructor(private val git: Git, private val confi
         return version
     }
 
-    private fun createTag(newVersion: SemVer) {
+    private fun createTag(newVersion: SemVer): SemVer {
         git.tag()
             .setName("v${newVersion.justSemVer()}")
             .setMessage("Release ${newVersion.justSemVer()}")
@@ -176,6 +174,8 @@ public class Releases public constructor(private val git: Git, private val confi
             "+ Created a tag v${newVersion.justSemVer()} " +
                     "[Release ${newVersion.justSemVer()}], original version is $newVersion"
         )
+
+        return SemVer(newVersion.major, newVersion.minor, newVersion.patch)
     }
 
     /**
