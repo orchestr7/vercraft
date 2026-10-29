@@ -34,7 +34,7 @@ jobs:
       - name: Status git before
         run: git status
 
-      - uses: burrunan/gradle-cache-action@v1
+      - uses: burrunan/gradle-cache-action@v3
         with:
           gradle-version: wrapper
 
