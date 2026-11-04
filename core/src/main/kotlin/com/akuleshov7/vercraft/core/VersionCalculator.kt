@@ -1,6 +1,7 @@
 package com.akuleshov7.vercraft.core
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.revwalk.RevWalk
@@ -101,16 +102,62 @@ public class VersionCalculator(
      *
      * This scenario applies to PATCH versions. Commits like **xxx** and **yyy** are typically created to implement
      * patches or additional fixes after the release of version **0.1.0** (commit **bbb**).
+     *
+     * (!) When the release branch has already accumulated `v<major>.<minor>.<patch>` tags, those tags
+     * are treated as the authoritative record of past patch releases and the version is computed as
+     * `latest_tag_patch + commits_since_that_tag`. This avoids miscalculations when the release
+     * branch has been merged back into main (which would otherwise shift the merge-base and break
+     * pure commit counting).
      */
     private fun calcVersionInRelease(): SemVer {
-        val distance = distanceFromDefaultMainBranch()
-        return releases.releaseBranches.find { it.ref == currentCheckoutBranch.ref }
+        val branchVersion = releases.releaseBranches.find { it.ref == currentCheckoutBranch.ref }
             ?.version
-            ?.incrementPatchVersion(distance)
             ?: throw IllegalStateException(
                 "Cannot find branch ${currentCheckoutBranch.ref!!.name} in the list of release branches:" +
                         "${releases.releaseBranches}"
             )
+
+        // Prefer existing patch tags when present: they are an authoritative record of what has
+        // already been released, and using them avoids miscalculations when the release branch has
+        // been merged back into main (which shifts the merge-base and breaks pure commit counting).
+        // Falls back to the legacy distance-from-main behaviour when no matching tags exist yet,
+        // preserving backwards compatibility for projects that have never tagged a patch release.
+        val latestPatchTag = findLatestReachablePatchTag(branchVersion)
+        if (latestPatchTag != null) {
+            val (taggedVersion, taggedCommit) = latestPatchTag
+            val sinceTag = currentCheckoutBranch.distanceBetweenCommits(taggedCommit, headCommit)
+            return SemVer(taggedVersion.major, taggedVersion.minor, taggedVersion.patch + sinceTag)
+        }
+
+        val distance = distanceFromDefaultMainBranch()
+        return branchVersion.incrementPatchVersion(distance)
+    }
+
+    /**
+     * Find the highest-patch tag matching the current release branch (`v<major>.<minor>.<patch>`)
+     * that is reachable from the current HEAD commit on this release branch.
+     *
+     * Both annotated and lightweight tags are supported. Tags pointing at commits which are not
+     * part of the release branch history are ignored.
+     */
+    private fun findLatestReachablePatchTag(branchVersion: SemVer): Pair<SemVer, RevCommit>? {
+        val tagPattern = Regex("^v?${branchVersion.major}\\.${branchVersion.minor}\\.(0|[1-9]\\d*)$")
+        val branchCommits: Set<String> = currentCheckoutBranch.gitLog.map { it.id.name }.toSet()
+
+        return git.tagList().call().mapNotNull { tagRef ->
+            val shortName = tagRef.name.substringAfterLast("refs/tags/")
+            val match = tagPattern.matchEntire(shortName) ?: return@mapNotNull null
+            val patch = match.groupValues[1].toInt()
+            val taggedCommit = resolveTaggedCommit(tagRef) ?: return@mapNotNull null
+            if (taggedCommit.id.name !in branchCommits) return@mapNotNull null
+            SemVer(branchVersion.major, branchVersion.minor, patch) to taggedCommit
+        }.maxByOrNull { it.first.patch }
+    }
+
+    private fun resolveTaggedCommit(tagRef: Ref): RevCommit? {
+        val peeled = repo.refDatabase.peel(tagRef)
+        val objectId = peeled.peeledObjectId ?: tagRef.objectId ?: return null
+        return RevWalk(repo).use { walk -> walk.parseCommit(objectId) }
     }
 
     /**
